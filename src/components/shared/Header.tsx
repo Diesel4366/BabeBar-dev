@@ -6,24 +6,30 @@ export const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   return (
-    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScrolled ? 'bg-white/90 backdrop-blur-lg py-4 shadow-sm' : 'bg-white/50 py-6'}`}>
-      <div className="max-w-5xl mx-auto px-6 flex justify-between items-center w-full">
-        <div className="text-2xl font-black tracking-tighter text-[#2D3436] flex items-center gap-1">
+    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-white/80 backdrop-blur-md border-b border-zinc-100 py-3' : 'bg-transparent py-5'}`}>
+      <div className="container-custom flex justify-between items-center">
+        <div className="text-xl font-extrabold tracking-tighter text-[#0A0A0A]">
           BABE<span className="text-primary italic">BAR</span>
         </div>
         
-        <nav className="flex items-center gap-6 md:gap-12">
-          <a href="#services" className="text-[11px] font-black uppercase tracking-[0.3em] text-[#2D3436] hover:text-primary transition-colors">Услуги</a>
-          <a href="#contacts" className="text-[11px] font-black uppercase tracking-[0.3em] text-[#2D3436] hover:text-primary transition-colors">Контакты</a>
+        <nav className="hidden md:flex gap-10">
+          <a href="#services" className="text-[13px] font-bold uppercase tracking-wider text-[#0A0A0A]/70 hover:text-[#0A0A0A] transition-colors">Услуги</a>
+          <a href="#contacts" className="text-[13px] font-bold uppercase tracking-wider text-[#0A0A0A]/70 hover:text-[#0A0A0A] transition-colors">Контакты</a>
         </nav>
+
+        <a 
+          href="https://t.me/babebar_booking_bot" 
+          target="_blank"
+          className="bg-[#0A0A0A] text-white text-[12px] font-bold px-5 py-2.5 rounded-full hover:bg-zinc-800 transition-all"
+        >
+          ЗАПИСАТЬСЯ
+        </a>
       </div>
     </header>
   );
