@@ -9,7 +9,7 @@
 :root {
   --background: 0 0% 98%; /* #FAFAFA */
   --foreground: 0 0% 4%; /* #0A0A0A */
-  --primary: 343 62% 56%; /* #D14D72 - Elegant Pink */
+  --primary: 343 62% 56%; /* #D14D72 */
   --primary-foreground: 0 0% 100%;
   --secondary: 0 0% 90%;
   --secondary-foreground: 0 0% 10%;
@@ -29,30 +29,80 @@ body {
   overflow-x: hidden;
 }
 
-@layer components {
-  .container-custom {
-    @apply max-w-6xl mx-auto px-6 w-full;
-  }
-  
-  @media (min-width: 768px) {
-    .container-custom {
-      @apply px-12;
-    }
-  }
-  
-  .btn-primary {
-    @apply bg-[#0A0A0A] text-white px-8 py-3.5 rounded-full font-semibold transition-all hover:bg-zinc-800 active:scale-95 shadow-sm;
-  }
-  
-  .btn-secondary {
-    @apply bg-white text-[#0A0A0A] border border-zinc-200 px-8 py-3.5 rounded-full font-semibold transition-all hover:bg-zinc-50 active:scale-95 shadow-sm;
-  }
+/* Base Component Styles using standard CSS to avoid @apply build issues */
+.container-custom {
+  max-width: 72rem; /* max-w-6xl */
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem; /* px-6 */
+  padding-right: 1.5rem;
+  width: 100%;
+}
 
-  .card-modern {
-    @apply bg-white border border-zinc-100 p-8 rounded-[2rem] transition-all hover:shadow-xl hover:shadow-zinc-200/50 hover:-translate-y-1;
+@media (min-width: 768px) {
+  .container-custom {
+    padding-left: 3rem; /* px-12 */
+    padding-right: 3rem;
   }
 }
 
+.btn-primary {
+  background-color: #0A0A0A;
+  color: white;
+  padding: 0.875rem 2rem;
+  border-radius: 9999px;
+  font-weight: 600;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.btn-primary:hover {
+  background-color: #27272a;
+}
+
+.btn-primary:active {
+  transform: scale(0.95);
+}
+
+.btn-secondary {
+  background-color: white;
+  color: #0A0A0A;
+  border: 1px solid #e4e4e7;
+  padding: 0.875rem 2rem;
+  border-radius: 9999px;
+  font-weight: 600;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-secondary:hover {
+  background-color: #fafafa;
+}
+
+.btn-secondary:active {
+  transform: scale(0.95);
+}
+
+.card-modern {
+  background-color: white;
+  border: 1px solid #f4f4f5;
+  padding: 2rem;
+  border-radius: 2rem;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-modern:hover {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  transform: translateY(-0.25rem);
+}
+
 h1, h2, h3, h4 {
-  @apply font-bold tracking-tight text-[#0A0A0A];
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: #0A0A0A;
 }
