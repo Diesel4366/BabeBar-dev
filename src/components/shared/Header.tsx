@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useBooking } from '@/context/BookingContext';
 
 export const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
+  const { setIsDrawerOpen } = useBooking();
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -23,13 +25,12 @@ export const Header = () => {
           <a href="#contacts" className="text-[13px] font-bold uppercase tracking-wider text-[#0A0A0A]/70 hover:text-[#0A0A0A] transition-colors">Контакты</a>
         </nav>
 
-        <a 
-          href="https://t.me/babebar_booking_bot" 
-          target="_blank"
-          className="bg-[#0A0A0A] text-white text-[12px] font-bold px-5 py-2.5 rounded-full hover:bg-zinc-800 transition-all"
+        <button 
+          onClick={() => setIsDrawerOpen(true)}
+          className="bg-[#0A0A0A] text-white text-[12px] font-bold px-5 py-2.5 rounded-full hover:bg-zinc-800 transition-all uppercase tracking-widest"
         >
           ЗАПИСАТЬСЯ
-        </a>
+        </button>
       </div>
     </header>
   );
