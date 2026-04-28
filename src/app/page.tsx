@@ -4,7 +4,7 @@ import { ServicesGrid } from '@/components/client/ServicesGrid';
 import { Marquee } from '@/components/ui/Marquee';
 import { Gallery } from '@/components/client/Gallery';
 import { MagneticButton } from '@/components/ui/MagneticButton';
-import { Instagram, MapPin, Phone } from 'lucide-react';
+import { Camera, MapPin, Phone } from 'lucide-react';
 
 export default async function Home() {
   const { data: services } = await supabaseAdmin
