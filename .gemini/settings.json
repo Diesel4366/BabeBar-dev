@@ -1,0 +1,15 @@
+{
+  "security": {
+    "auth": {
+      "selectedType": "oauth-personal"
+    }
+  },
+  "general": {
+    "preferredEditor": "vim"
+  },
+  "mcpServers": {
+    "supabase": {
+      "httpUrl": "https://mcp.supabase.com/mcp?project_ref=lrnajodxfwegimnwnbdd"
+    }
+  }
+}
