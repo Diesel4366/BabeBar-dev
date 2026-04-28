@@ -18,7 +18,7 @@
   --muted: 0 0% 94%;
   --muted-foreground: 0 0% 40%;
   --border: 0 0% 90%;
-  --radius: 1.25rem; /* Modern rounded corners */
+  --radius: 1.25rem;
 }
 
 body {
@@ -31,7 +31,13 @@ body {
 
 @layer components {
   .container-custom {
-    @apply max-w-6xl mx-auto px-6 md:px-12 w-full;
+    @apply max-w-6xl mx-auto px-6 w-full;
+  }
+  
+  @media (min-width: 768px) {
+    .container-custom {
+      @apply px-12;
+    }
   }
   
   .btn-primary {
