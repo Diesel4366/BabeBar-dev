@@ -52,7 +52,7 @@ export default async function Home() {
                   <span>+7 (999) 000-00-00</span>
                 </div>
                 <div className="flex items-center gap-4 text-xl">
-                  <Instagram className="text-primary" />
+                  <Camera className="text-primary" />
                   <span>@babebar_salon</span>
                 </div>
               </div>
