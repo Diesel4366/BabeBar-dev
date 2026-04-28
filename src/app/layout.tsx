@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { BookingProvider } from "@/context/BookingContext";
-import { BookingDrawer } from "@/components/booking/BookingDrawer";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -25,10 +23,7 @@ export default function RootLayout({
       className={`${inter.variable} h-full antialiased scroll-smooth`}
     >
       <body className="min-h-full flex flex-col bg-[#FAFAFA] text-[#0A0A0A]">
-        <BookingProvider>
-          {children}
-          <BookingDrawer />
-        </BookingProvider>
+        {children}
       </body>
     </html>
   );
