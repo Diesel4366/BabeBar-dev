@@ -1,7 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase';
 import { Hero } from '@/components/client/Hero';
 import { ServicesList } from '@/components/client/ServicesList';
-import { Instagram, MapPin, Phone } from 'lucide-react';
+import { Camera, MapPin, Phone } from 'lucide-react';
 
 export default async function Home() {
   const { data: services } = await supabaseAdmin
