@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 @theme {
   --font-sans: var(--font-inter);
@@ -12,6 +10,7 @@
   --primary: #D14D72;
   --zinc-100: #F4F4F5;
   --zinc-200: #E4E4E7;
+  --zinc-300: #D4D4D8;
   --zinc-400: #A1A1AA;
   --zinc-500: #71717A;
   --zinc-800: #27272A;
@@ -34,7 +33,6 @@ body {
   line-height: 1.5;
 }
 
-/* Fluid Typography & Layout Containers */
 .container-custom {
   width: 100%;
   max-width: 1200px;
@@ -48,36 +46,63 @@ body {
   }
 }
 
-/* Modern Luxe UI Components */
+/* Base Component Styles using standard CSS to avoid @apply build issues */
 .btn-primary {
-  @apply bg-[#0A0A0A] text-white font-bold rounded-full transition-all duration-300 flex items-center justify-center disabled:opacity-50 active:scale-95;
+  background-color: #0A0A0A;
+  color: white;
   padding: 1rem 2rem;
-  font-size: 0.875rem;
-  letter-spacing: 0.05em;
+  border-radius: 9999px;
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.btn-primary:hover {
-  @apply bg-zinc-800 shadow-lg shadow-black/5;
+.btn-primary:hover:not(:disabled) {
+  background-color: #27272A;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(1);
 }
 
 .card-modern {
-  @apply bg-white border border-zinc-100 rounded-[2rem] transition-all duration-500 overflow-hidden;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.01);
+  background-color: white;
+  border: 1px solid #F4F4F5;
+  border-radius: 2rem;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
 }
 
 .card-modern:hover {
-  @apply border-zinc-200 -translate-y-1;
+  border-color: #E4E4E7;
+  transform: translateY(-4px);
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
 }
 
-/* Input Styles for iOS Fixes */
+/* iOS Fixes */
 input, select, textarea {
-  @apply appearance-none outline-none transition-all duration-200;
-  font-size: 16px !important; /* Prevents auto-zoom on iOS */
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+  border-radius: 0;
+  font-size: 16px !important;
 }
 
-/* Hide scrollbar but keep functionality */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -86,7 +111,11 @@ input, select, textarea {
   scrollbar-width: none;
 }
 
-/* Transitions */
 .page-transition {
-  @apply animate-in fade-in duration-500;
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
