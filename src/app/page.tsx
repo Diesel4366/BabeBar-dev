@@ -3,7 +3,8 @@ import { Hero } from '@/components/client/Hero';
 import { ServicesGrid } from '@/components/client/ServicesGrid';
 import { Header } from '@/components/shared/Header';
 import { BookingCTA } from '@/components/client/BookingCTA';
-import { Camera, MapPin, Phone } from 'lucide-react';
+import { Camera, MapPin, Phone, Instagram } from 'lucide-react';
+import Link from 'next/link';
 
 export default async function Home() {
   const { data: services } = await supabaseAdmin
@@ -13,50 +14,67 @@ export default async function Home() {
     .order('created_at', { ascending: true });
 
   return (
-    <main className="min-h-screen bg-[#FAFAFA]">
+    <main className="min-h-screen bg-[#FAFAFA] page-transition">
       <Header />
       
       <Hero />
       
       <ServicesGrid services={services || []} />
 
-      {/* Modern Contact Section */}
-      <section id="contacts" className="py-24 bg-zinc-50">
+      {/* Gallery Section */}
+      <section id="gallery" className="py-32 bg-zinc-50 overflow-hidden">
         <div className="container-custom">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            <div>
-              <h2 className="text-4xl md:text-6xl font-black mb-8 leading-tight">
-                МЫ ВСЕГДА <br/> <span className="text-primary italic text-3xl md:text-5xl">НА СВЯЗИ</span>
-              </h2>
-              <div className="space-y-8">
-                <div className="flex items-start gap-6">
-                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center border border-zinc-100 shadow-sm shrink-0">
-                    <MapPin className="text-primary" size={20} />
+          <div className="text-center mb-20 space-y-4">
+            <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter">НАШИ <span className="text-primary italic">РАБОТЫ</span></h2>
+            <p className="text-zinc-400 font-medium max-w-lg mx-auto uppercase text-[10px] tracking-[0.2em]">Преображение начинается здесь</p>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="aspect-[3/4] bg-white rounded-[2rem] border border-zinc-100 flex items-center justify-center group overflow-hidden relative">
+                <div className="absolute inset-0 bg-primary/5 group-hover:bg-primary/10 transition-colors" />
+                <Camera size={32} className="text-zinc-200 group-hover:scale-110 transition-transform duration-500" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Modern Contact Section */}
+      <section id="contacts" className="py-32 bg-white">
+        <div className="container-custom">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+            <div className="space-y-12">
+              <div className="space-y-6">
+                <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-[0.85]">
+                  МЫ ВСЕГДА <br/> <span className="text-primary italic">НА СВЯЗИ</span>
+                </h2>
+                <p className="text-zinc-400 font-medium text-lg max-w-md">Готовы ответить на любые вопросы и подобрать идеальное время для вашего визита.</p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                <div className="space-y-2 group">
+                  <div className="w-10 h-10 bg-zinc-50 rounded-xl flex items-center justify-center text-zinc-400 group-hover:bg-primary group-hover:text-white transition-all duration-300">
+                    <MapPin size={20} />
                   </div>
-                  <div>
-                    <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-1">Адрес</h4>
-                    <p className="text-xl font-bold text-[#0A0A0A]">Ул. Красоты, 13, Москва</p>
-                  </div>
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-300">Адрес студии</h4>
+                  <p className="font-bold text-lg text-[#0A0A0A]">Ул. Красоты, 13, Москва</p>
                 </div>
                 
-                <div className="flex items-start gap-6">
-                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center border border-zinc-100 shadow-sm shrink-0">
-                    <Phone className="text-primary" size={20} />
+                <div className="space-y-2 group">
+                  <div className="w-10 h-10 bg-zinc-50 rounded-xl flex items-center justify-center text-zinc-400 group-hover:bg-primary group-hover:text-white transition-all duration-300">
+                    <Phone size={20} />
                   </div>
-                  <div>
-                    <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-1">Телефон</h4>
-                    <p className="text-xl font-bold text-[#0A0A0A]">+7 (999) 000-00-00</p>
-                  </div>
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-300">Телефон</h4>
+                  <p className="font-bold text-lg text-[#0A0A0A]">+7 (999) 000-00-00</p>
                 </div>
 
-                <div className="flex items-start gap-6">
-                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center border border-zinc-100 shadow-sm shrink-0">
-                    <Camera className="text-primary" size={20} />
+                <div className="space-y-2 group">
+                  <div className="w-10 h-10 bg-zinc-50 rounded-xl flex items-center justify-center text-zinc-400 group-hover:bg-primary group-hover:text-white transition-all duration-300">
+                    <Camera size={20} />
                   </div>
-                  <div>
-                    <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-1">Instagram</h4>
-                    <p className="text-xl font-bold text-[#0A0A0A]">@babebar_salon</p>
-                  </div>
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-300">Instagram</h4>
+                  <p className="font-bold text-lg text-[#0A0A0A]">@babebar_salon</p>
                 </div>
               </div>
             </div>
@@ -67,16 +85,16 @@ export default async function Home() {
       </section>
 
       <footer className="py-12 border-t border-zinc-100 bg-white">
-        <div className="container-custom flex flex-col md:flex-row justify-between items-center gap-8">
-          <div className="text-lg font-black tracking-tighter">
+        <div className="container-custom flex flex-col md:flex-row justify-between items-center gap-10">
+          <div className="text-2xl font-black tracking-tighter">
             BABE<span className="text-primary italic">BAR</span>
           </div>
-          <div className="text-zinc-400 text-xs font-bold uppercase tracking-[0.2em]">
-            &copy; {new Date().getFullYear()} BEAUTY STUDIO. ALL RIGHTS RESERVED.
+          <div className="text-zinc-300 text-[10px] font-black uppercase tracking-[0.3em]">
+            &copy; {new Date().getFullYear()} Modern Beauty Studio
           </div>
-          <div className="flex gap-6 text-xs font-bold uppercase tracking-widest text-zinc-500">
-            <a href="#" className="hover:text-[#0A0A0A]">Privacy</a>
-            <a href="#" className="hover:text-[#0A0A0A]">Terms</a>
+          <div className="flex gap-8 text-[10px] font-black uppercase tracking-widest text-zinc-400">
+            <Link href="#" className="hover:text-[#0A0A0A] transition-colors">Privacy</Link>
+            <Link href="#" className="hover:text-[#0A0A0A] transition-colors">Terms</Link>
           </div>
         </div>
       </footer>

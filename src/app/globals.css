@@ -7,102 +7,86 @@
 }
 
 :root {
-  --background: 0 0% 98%; /* #FAFAFA */
-  --foreground: 0 0% 4%; /* #0A0A0A */
-  --primary: 343 62% 56%; /* #D14D72 */
-  --primary-foreground: 0 0% 100%;
-  --secondary: 0 0% 90%;
-  --secondary-foreground: 0 0% 10%;
-  --card: 0 0% 100%;
-  --card-foreground: 0 0% 4%;
-  --muted: 0 0% 94%;
-  --muted-foreground: 0 0% 40%;
-  --border: 0 0% 90%;
-  --radius: 1.25rem;
+  --background: #FAFAFA;
+  --foreground: #0A0A0A;
+  --primary: #D14D72;
+  --zinc-100: #F4F4F5;
+  --zinc-200: #E4E4E7;
+  --zinc-400: #A1A1AA;
+  --zinc-500: #71717A;
+  --zinc-800: #27272A;
+  --zinc-900: #18181B;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
+  background-color: var(--background);
+  color: var(--foreground);
   font-family: var(--font-inter), sans-serif;
-  -webkit-font-smoothing: antialiased;
+  margin: 0;
+  padding: 0;
   overflow-x: hidden;
+  line-height: 1.5;
 }
 
-/* Base Component Styles using standard CSS to avoid @apply build issues */
+/* Fluid Typography & Layout Containers */
 .container-custom {
-  max-width: 72rem; /* max-w-6xl */
-  margin-left: auto;
-  margin-right: auto;
-  padding-left: 1.5rem; /* px-6 */
-  padding-right: 1.5rem;
   width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
 }
 
 @media (min-width: 768px) {
   .container-custom {
-    padding-left: 3rem; /* px-12 */
-    padding-right: 3rem;
+    padding: 0 2rem;
   }
 }
 
+/* Modern Luxe UI Components */
 .btn-primary {
-  background-color: #0A0A0A;
-  color: white;
-  padding: 0.875rem 2rem;
-  border-radius: 9999px;
-  font-weight: 600;
-  transition: all 0.2s;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  @apply bg-[#0A0A0A] text-white font-bold rounded-full transition-all duration-300 flex items-center justify-center disabled:opacity-50 active:scale-95;
+  padding: 1rem 2rem;
+  font-size: 0.875rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .btn-primary:hover {
-  background-color: #27272a;
-}
-
-.btn-primary:active {
-  transform: scale(0.95);
-}
-
-.btn-secondary {
-  background-color: white;
-  color: #0A0A0A;
-  border: 1px solid #e4e4e7;
-  padding: 0.875rem 2rem;
-  border-radius: 9999px;
-  font-weight: 600;
-  transition: all 0.2s;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.btn-secondary:hover {
-  background-color: #fafafa;
-}
-
-.btn-secondary:active {
-  transform: scale(0.95);
+  @apply bg-zinc-800 shadow-lg shadow-black/5;
 }
 
 .card-modern {
-  background-color: white;
-  border: 1px solid #f4f4f5;
-  padding: 2rem;
-  border-radius: 2rem;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  @apply bg-white border border-zinc-100 rounded-[2rem] transition-all duration-500 overflow-hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.01);
 }
 
 .card-modern:hover {
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  transform: translateY(-0.25rem);
+  @apply border-zinc-200 -translate-y-1;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
 }
 
-h1, h2, h3, h4 {
-  font-weight: 700;
-  letter-spacing: -0.025em;
-  color: #0A0A0A;
+/* Input Styles for iOS Fixes */
+input, select, textarea {
+  @apply appearance-none outline-none transition-all duration-200;
+  font-size: 16px !important; /* Prevents auto-zoom on iOS */
+}
+
+/* Hide scrollbar but keep functionality */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Transitions */
+.page-transition {
+  @apply animate-in fade-in duration-500;
 }
