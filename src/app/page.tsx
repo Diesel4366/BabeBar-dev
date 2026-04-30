@@ -3,7 +3,7 @@ import { Hero } from '@/components/client/Hero';
 import { ServicesGrid } from '@/components/client/ServicesGrid';
 import { Header } from '@/components/shared/Header';
 import { BookingCTA } from '@/components/client/BookingCTA';
-import { Camera, MapPin, Phone, Instagram } from 'lucide-react';
+import { Camera, MapPin, Phone } from 'lucide-react';
 import Link from 'next/link';
 
 export default async function Home() {
