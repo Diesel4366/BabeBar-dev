@@ -235,12 +235,16 @@ function BookingContent() {
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                     {['10:00', '11:00', '12:00', '13:00', '14:30', '15:30', '17:00', '18:30', '19:30', '21:00'].map(time => {
                       const isSelected = selectedTime === time;
+                      const isOccupied = occupiedSlots.includes(time);
                       return (
                         <button
                           key={time}
+                          disabled={isOccupied}
                           onClick={() => setSelectedTime(time)}
                           className={`py-5 rounded-2xl border font-black text-sm transition-all duration-300 ${
-                            isSelected ? 'border-primary bg-primary text-white shadow-lg shadow-primary/20' : 'border-white bg-white hover:border-zinc-200 shadow-sm'
+                            isSelected ? 'border-primary bg-primary text-white shadow-lg shadow-primary/20' : 
+                            isOccupied ? 'border-zinc-50 bg-zinc-50 text-zinc-200 cursor-not-allowed opacity-50' :
+                            'border-white bg-white hover:border-zinc-200 shadow-sm'
                           }`}
                         >
                           {time}

@@ -9,6 +9,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    const formattedDate = date.split('T')[0];
+
+    // 0. Проверка на существующую запись на это время
+    const { data: existingAppointment } = await supabaseAdmin
+      .from('appointments')
+      .from('appointments')
+      .select('id')
+      .eq('date', formattedDate)
+      .eq('start_time', time)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    if (existingAppointment) {
+      return NextResponse.json({ error: 'Это время уже занято' }, { status: 400 });
+    }
+
     // 1. Находим или создаем профиль
     // Так как у нас нет Auth в этом шаге, мы просто ищем по телефону
     let { data: profile } = await supabaseAdmin
