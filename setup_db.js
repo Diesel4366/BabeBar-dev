@@ -41,6 +41,15 @@ const sql = `
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
   );
 
+  -- Настройка RLS для профилей
+  ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+  DROP POLICY IF EXISTS "Allow public read profiles" ON profiles;
+  CREATE POLICY "Allow public read profiles" ON profiles FOR SELECT USING (true);
+
+  DROP POLICY IF EXISTS "Allow service role all" ON profiles;
+  CREATE POLICY "Allow service role all" ON profiles FOR ALL USING (true);
+
   -- Таблица записей
   CREATE TABLE IF NOT EXISTS appointments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
