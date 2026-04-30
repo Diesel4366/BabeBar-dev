@@ -14,7 +14,6 @@ export async function POST(req: Request) {
     // 0. Проверка на существующую запись на это время
     const { data: existingAppointment } = await supabaseAdmin
       .from('appointments')
-      .from('appointments')
       .select('id')
       .eq('date', formattedDate)
       .eq('start_time', time)
