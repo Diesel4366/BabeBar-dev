@@ -3,6 +3,7 @@ import { Hero } from '@/components/client/Hero';
 import { ServicesGrid } from '@/components/client/ServicesGrid';
 import { Header } from '@/components/shared/Header';
 import { BookingCTA } from '@/components/client/BookingCTA';
+import { Advantages } from '@/components/client/Advantages';
 import { Camera, MapPin, Phone } from 'lucide-react';
 import Link from 'next/link';
 
@@ -44,10 +45,7 @@ export default async function Home() {
                 target="_blank"
                 className="aspect-[3/4] bg-white rounded-[2rem] border border-zinc-100 flex items-center justify-center group overflow-hidden relative"
               >
-                {/* Placeholder image layer */}
                 <div className="absolute inset-0 bg-zinc-200 animate-pulse group-hover:scale-110 transition-transform duration-700" />
-                
-                {/* Overlay */}
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-3">
                   <svg 
                     width="32" 
@@ -63,7 +61,6 @@ export default async function Home() {
                   </svg>
                   <span className="text-white text-[10px] font-bold uppercase tracking-widest">Смотреть</span>
                 </div>
-                
                 <Camera size={32} className="text-zinc-300 group-hover:opacity-0 transition-opacity relative z-10" />
               </Link>
             ))}
@@ -116,7 +113,7 @@ export default async function Home() {
                     <Camera size={20} />
                   </div>
                   <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-300">Instagram</h4>
-                  <p className="font-bold text-lg text-[#0A0A0A]">@babebar_salon</p>
+                  <p className="font-bold text-lg text-[#0A0A0A]">@babe_bar_nn</p>
                 </div>
               </div>
             </div>
@@ -139,11 +136,6 @@ export default async function Home() {
             <Link href="#" className="hover:text-[#0A0A0A] transition-colors">Terms</Link>
           </div>
         </div>
-      </footer>
-    </main>
-  );
-}
-iv>
       </footer>
     </main>
   );

@@ -53,8 +53,28 @@ function BookingContent() {
     });
   };
 
+  const formatPhone = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 1) return numbers.length === 1 ? '+7' : '';
+    let formatted = '+7';
+    if (numbers.length > 1) formatted += ' (' + numbers.substring(1, 4);
+    if (numbers.length >= 5) formatted += ') ' + numbers.substring(4, 7);
+    if (numbers.length >= 8) formatted += '-' + numbers.substring(7, 9);
+    if (numbers.length >= 10) formatted += '-' + numbers.substring(9, 11);
+    return formatted;
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhone(e.target.value);
+    setFormData({ ...formData, phone: formatted });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.phone.length < 18) {
+      alert('Пожалуйста, введите полный номер телефона');
+      return;
+    }
     setLoading(true);
     
     try {
@@ -304,30 +324,6 @@ function BookingContent() {
           <div className="max-w-4xl mx-auto flex justify-between items-center gap-6">
             <div className="flex flex-col">
               <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest leading-none mb-1">Сумма</span>
-              <span className="text-xl font-black">{totalPrice} ₽</span>
-            </div>
-            <button
-              disabled={step === 1 ? selectedServices.length === 0 : !selectedDate || !selectedTime}
-              onClick={() => setStep(step + 1)}
-              className="btn-primary flex-1 py-5 text-[10px]"
-            >
-              {step === 1 ? 'ВЫБРАТЬ ВРЕМЯ' : 'ДАЛЕЕ'}
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default function BookingPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center"><div className="w-10 h-10 border-4 border-zinc-100 border-t-primary rounded-full animate-spin" /></div>}>
-      <BookingContent />
-    </Suspense>
-  );
-}
-font-black text-zinc-400 uppercase tracking-widest leading-none mb-1">Сумма</span>
               <span className="text-xl font-black">{totalPrice} ₽</span>
             </div>
             <button
