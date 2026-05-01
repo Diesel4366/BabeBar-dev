@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { SITE_CONFIG } from '@/lib/config';
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -25,9 +24,6 @@ export async function GET(req: Request) {
       end: app.end_time.substring(0, 5),
     }));
 
-    // Рабочие часы: сначала проверяем исключения, потом правила, потом дефолт
-    const dayOfWeek = new Date(date).getDay(); // 0=Sun … 6=Sat
-
     const { data: exception } = await supabaseAdmin
       .from('schedule_exceptions')
       .select('*')
@@ -36,25 +32,11 @@ export async function GET(req: Request) {
 
     let workingHours: { start: string; end: string } | null = null;
 
-    if (exception) {
-      workingHours =
-        exception.is_working && exception.start_time && exception.end_time
-          ? {
-              start: exception.start_time.substring(0, 5),
-              end: exception.end_time.substring(0, 5),
-            }
-          : null;
-    } else {
-      const { data: rule } = await supabaseAdmin
-        .from('schedule_rules')
-        .select('*')
-        .eq('day_of_week', dayOfWeek)
-        .eq('is_working', true)
-        .maybeSingle();
-
-      workingHours = rule
-        ? { start: rule.start_time.substring(0, 5), end: rule.end_time.substring(0, 5) }
-        : { start: SITE_CONFIG.defaultWorkStart, end: SITE_CONFIG.defaultWorkEnd };
+    if (exception && exception.is_working && exception.start_time && exception.end_time) {
+      workingHours = {
+        start: exception.start_time.substring(0, 5),
+        end: exception.end_time.substring(0, 5),
+      };
     }
 
     return NextResponse.json({ occupiedIntervals, workingHours });

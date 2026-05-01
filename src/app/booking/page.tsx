@@ -26,6 +26,7 @@ function BookingContent() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [success, setSuccess] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
+  const [workingDates, setWorkingDates] = useState<Set<string>>(new Set());
 
   // Derived service groups
   const mainServices = allServices.filter(s => !s.is_addon);
@@ -37,9 +38,22 @@ function BookingContent() {
   useEffect(() => {
     async function loadData() {
       try {
-        const res = await fetch('/api/services');
-        const data: Service[] = await res.json();
+        const today = new Date();
+        const from = today.toISOString().split('T')[0];
+        const toDate = new Date(today);
+        toDate.setDate(today.getDate() + 59);
+        const to = toDate.toISOString().split('T')[0];
+
+        const [servicesRes, scheduleRes] = await Promise.all([
+          fetch('/api/services'),
+          fetch(`/api/schedule?from=${from}&to=${to}`),
+        ]);
+
+        const data: Service[] = await servicesRes.json();
         setAllServices(data);
+
+        const schedule: { date: string }[] = await scheduleRes.json();
+        setWorkingDates(new Set(Array.isArray(schedule) ? schedule.map(s => s.date) : []));
 
         const mains = data.filter(s => !s.is_addon);
         const defaultCat = CATEGORY_ORDER.find(cat => mains.some(s => s.category === cat)) ?? '';
@@ -308,22 +322,29 @@ function BookingContent() {
                   <span className="text-xs font-bold text-primary">{selectedDate?.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })}</span>
                 </div>
                 <div className="flex gap-3 overflow-x-auto no-scrollbar pb-4 -mx-6 px-6">
-                  {[...Array(14)].map((_, i) => {
+                  {[...Array(60)].map((_, i) => {
                     const date = new Date();
                     date.setDate(date.getDate() + i);
+                    const dateKey = date.toISOString().split('T')[0];
+                    const isWorking = workingDates.has(dateKey);
                     const isSelected = selectedDate?.toDateString() === date.toDateString();
                     return (
                       <button
                         key={i}
-                        onClick={() => setSelectedDate(date)}
+                        onClick={() => isWorking && setSelectedDate(date)}
+                        disabled={!isWorking}
                         className={`min-w-[70px] aspect-[4/5] flex flex-col items-center justify-center rounded-2xl border transition-all duration-300 ${
-                          isSelected ? 'border-primary bg-primary text-white shadow-xl shadow-primary/20' : 'border-white bg-white hover:border-zinc-200 shadow-sm'
+                          isSelected
+                            ? 'border-primary bg-primary text-white shadow-xl shadow-primary/20'
+                            : isWorking
+                            ? 'border-white bg-white hover:border-zinc-200 shadow-sm cursor-pointer'
+                            : 'border-zinc-50 bg-zinc-50 cursor-not-allowed opacity-40'
                         }`}
                       >
-                        <span className={`text-[10px] font-black uppercase tracking-tighter mb-1 ${isSelected ? 'text-white/60' : 'text-zinc-300'}`}>
+                        <span className={`text-[10px] font-black uppercase tracking-tighter mb-1 ${isSelected ? 'text-white/60' : isWorking ? 'text-zinc-300' : 'text-zinc-300'}`}>
                           {date.toLocaleDateString('ru-RU', { weekday: 'short' })}
                         </span>
-                        <span className="text-xl font-black">{date.getDate()}</span>
+                        <span className={`text-xl font-black ${!isWorking && !isSelected ? 'text-zinc-300' : ''}`}>{date.getDate()}</span>
                       </button>
                     );
                   })}
