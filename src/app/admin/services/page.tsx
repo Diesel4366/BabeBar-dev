@@ -9,20 +9,20 @@ import Image from 'next/image';
 export default function AdminServices() {
   const [services, setServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const supabase = createClientClient();
 
   const fetchServices = useCallback(async () => {
     setIsLoading(true);
-    const { data, error } = await supabase
-      .from('services')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (!error && data) {
-      setServices(data);
+    try {
+      const res = await fetch('/api/services');
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setServices(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch services:', err);
     }
     setIsLoading(false);
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     fetchServices();
