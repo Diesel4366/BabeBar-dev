@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { createClientClient } from '@/lib/supabase';
 import { Service } from '@/types';
 import { Plus, Trash2, Edit2, Clock } from 'lucide-react';
 import Image from 'next/image';
