@@ -236,12 +236,21 @@ function BookingContent() {
                         <button
                           key={service.id}
                           onClick={() => toggleService(service)}
-                          className={`text-left p-6 rounded-3xl border transition-all duration-300 flex justify-between items-center ${
-                            isSelected ? 'border-primary bg-pink-50/20' : 'border-white bg-white hover:border-zinc-200 shadow-sm'
-                          }`}
+                          className="text-left p-6 rounded-3xl border transition-all duration-300 flex justify-between items-center"
+                          style={{
+                            borderColor: isSelected ? '#D14D72' : undefined,
+                            backgroundColor: isSelected ? '#fdf2f5' : 'white',
+                            boxShadow: isSelected ? 'none' : '0 1px 3px rgba(0,0,0,0.06)',
+                          }}
                         >
                           <div className="flex gap-5 items-center">
-                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all flex-shrink-0 ${isSelected ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'bg-zinc-50 text-zinc-400'}`}>
+                            <div
+                              className="w-12 h-12 rounded-2xl flex items-center justify-center transition-all flex-shrink-0"
+                              style={{
+                                backgroundColor: isSelected ? '#D14D72' : '#F4F4F5',
+                                color: isSelected ? 'white' : '#A1A1AA',
+                              }}
+                            >
                               <Star size={20} fill={isSelected ? 'currentColor' : 'none'} />
                             </div>
                             <div>
@@ -253,7 +262,14 @@ function BookingContent() {
                               </div>
                             </div>
                           </div>
-                          <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0 ${isSelected ? 'border-primary bg-primary text-white' : 'border-zinc-100'}`}>
+                          <div
+                            className="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0"
+                            style={{
+                              borderColor: isSelected ? '#D14D72' : '#E4E4E7',
+                              backgroundColor: isSelected ? '#D14D72' : 'transparent',
+                              color: 'white',
+                            }}
+                          >
                             {isSelected && <CheckCircle2 size={14} />}
                           </div>
                         </button>
@@ -275,12 +291,21 @@ function BookingContent() {
                             <button
                               key={addon.id}
                               onClick={() => toggleService(addon)}
-                              className={`text-left p-5 rounded-2xl border transition-all duration-300 flex justify-between items-center ${
-                                isSelected ? 'border-primary bg-pink-50/20' : 'bg-zinc-50/50 border-zinc-100 hover:border-zinc-200'
-                              }`}
+                              className="text-left p-5 rounded-2xl border transition-all duration-300 flex justify-between items-center"
+                              style={{
+                                borderColor: isSelected ? '#D14D72' : '#E4E4E7',
+                                backgroundColor: isSelected ? '#fdf2f5' : '#FAFAFA',
+                              }}
                             >
                               <div className="flex gap-4 items-center">
-                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all flex-shrink-0 ${isSelected ? 'bg-primary text-white shadow-md shadow-primary/20' : 'bg-white text-zinc-400 border border-zinc-100'}`}>
+                                <div
+                                  className="w-9 h-9 rounded-xl flex items-center justify-center transition-all flex-shrink-0"
+                                  style={{
+                                    backgroundColor: isSelected ? '#D14D72' : 'white',
+                                    color: isSelected ? 'white' : '#A1A1AA',
+                                    border: isSelected ? 'none' : '1px solid #E4E4E7',
+                                  }}
+                                >
                                   <Plus size={16} />
                                 </div>
                                 <div>
@@ -294,7 +319,14 @@ function BookingContent() {
                                   </div>
                                 </div>
                               </div>
-                              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0 ${isSelected ? 'border-primary bg-primary text-white' : 'border-zinc-200'}`}>
+                              <div
+                                className="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0"
+                                style={{
+                                  borderColor: isSelected ? '#D14D72' : '#E4E4E7',
+                                  backgroundColor: isSelected ? '#D14D72' : 'transparent',
+                                  color: 'white',
+                                }}
+                              >
                                 {isSelected && <CheckCircle2 size={14} />}
                               </div>
                             </button>
@@ -319,7 +351,7 @@ function BookingContent() {
               <section>
                 <div className="flex justify-between items-center mb-6">
                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Выберите дату</span>
-                  <span className="text-xs font-bold text-primary">{selectedDate?.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })}</span>
+                  <span className="text-xs font-bold" style={{ color: '#D14D72' }}>{selectedDate?.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })}</span>
                 </div>
                 <div className="flex gap-3 overflow-x-auto no-scrollbar pb-4 -mx-6 px-6">
                   {[...Array(60)].map((_, i) => {
@@ -333,18 +365,23 @@ function BookingContent() {
                         key={i}
                         onClick={() => isWorking && setSelectedDate(date)}
                         disabled={!isWorking}
-                        className={`min-w-[70px] aspect-[4/5] flex flex-col items-center justify-center rounded-2xl border transition-all duration-300 ${
-                          isSelected
-                            ? 'border-primary bg-primary text-white shadow-xl shadow-primary/20'
-                            : isWorking
-                            ? 'border-white bg-white hover:border-zinc-200 shadow-sm cursor-pointer'
-                            : 'border-zinc-50 bg-zinc-50 cursor-not-allowed opacity-40'
-                        }`}
+                        className="min-w-[70px] aspect-[4/5] flex flex-col items-center justify-center rounded-2xl border transition-all duration-300"
+                        style={{
+                          backgroundColor: isSelected ? '#D14D72' : isWorking ? 'white' : '#F4F4F5',
+                          borderColor: isSelected ? '#D14D72' : isWorking ? 'white' : '#F4F4F5',
+                          color: isSelected ? 'white' : isWorking ? '#0A0A0A' : '#A1A1AA',
+                          opacity: isWorking || isSelected ? 1 : 0.45,
+                          cursor: isWorking ? 'pointer' : 'not-allowed',
+                          boxShadow: isSelected ? '0 10px 30px rgba(209,77,114,0.3)' : isWorking ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
+                        }}
                       >
-                        <span className={`text-[10px] font-black uppercase tracking-tighter mb-1 ${isSelected ? 'text-white/60' : isWorking ? 'text-zinc-300' : 'text-zinc-300'}`}>
+                        <span
+                          className="text-[10px] font-black uppercase tracking-tighter mb-1"
+                          style={{ color: isSelected ? 'rgba(255,255,255,0.6)' : '#A1A1AA' }}
+                        >
                           {date.toLocaleDateString('ru-RU', { weekday: 'short' })}
                         </span>
-                        <span className={`text-xl font-black ${!isWorking && !isSelected ? 'text-zinc-300' : ''}`}>{date.getDate()}</span>
+                        <span className="text-xl font-black">{date.getDate()}</span>
                       </button>
                     );
                   })}
@@ -379,11 +416,15 @@ function BookingContent() {
                               key={time}
                               disabled={!isAvailable}
                               onClick={() => setSelectedTime(time)}
-                              className={`py-5 rounded-2xl border font-black text-sm transition-all duration-300 ${
-                                isSelected ? 'border-primary bg-primary text-white shadow-lg shadow-primary/20' :
-                                !isAvailable ? 'border-zinc-50 bg-zinc-50 text-zinc-200 cursor-not-allowed opacity-50' :
-                                'border-white bg-white hover:border-zinc-200 shadow-sm'
-                              }`}
+                              className="py-5 rounded-2xl border font-black text-sm transition-all duration-300"
+                              style={{
+                                backgroundColor: isSelected ? '#D14D72' : isAvailable ? 'white' : '#F9F9F9',
+                                borderColor: isSelected ? '#D14D72' : isAvailable ? 'white' : '#F4F4F5',
+                                color: isSelected ? 'white' : isAvailable ? '#0A0A0A' : '#D4D4D8',
+                                opacity: isAvailable || isSelected ? 1 : 0.5,
+                                cursor: isAvailable ? 'pointer' : 'not-allowed',
+                                boxShadow: isSelected ? '0 6px 20px rgba(209,77,114,0.25)' : isAvailable ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
+                              }}
                             >
                               {time}
                             </button>
@@ -408,25 +449,25 @@ function BookingContent() {
               <form onSubmit={handleSubmit} className="space-y-12">
                 <div className="space-y-4">
                   <div className="relative group">
-                    <User className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-300 group-focus-within:text-primary transition-colors" size={20} />
+                    <User className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-300 transition-colors" size={20} />
                     <input
                       type="text"
                       required
                       placeholder="Ваше имя"
                       value={formData.name}
                       onChange={e => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full bg-white pl-16 pr-8 py-6 rounded-3xl border border-zinc-100 focus:border-primary focus:ring-4 focus:ring-primary/5 font-bold"
+                      className="w-full bg-white pl-16 pr-8 py-6 rounded-3xl border border-zinc-100 font-bold outline-none"
                     />
                   </div>
                   <div className="relative group">
-                    <Phone className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-300 group-focus-within:text-primary transition-colors" size={20} />
+                    <Phone className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-300 transition-colors" size={20} />
                     <input
                       type="tel"
                       required
                       placeholder="+7 (999) 000-00-00"
                       value={formData.phone}
                       onChange={e => setFormData({ ...formData, phone: formatPhone(e.target.value) })}
-                      className="w-full bg-white pl-16 pr-8 py-6 rounded-3xl border border-zinc-100 focus:border-primary focus:ring-4 focus:ring-primary/5 font-bold"
+                      className="w-full bg-white pl-16 pr-8 py-6 rounded-3xl border border-zinc-100 font-bold outline-none"
                     />
                   </div>
                 </div>
@@ -454,7 +495,8 @@ function BookingContent() {
                   <button
                     disabled={loading || !formData.name || !formData.phone}
                     type="submit"
-                    className="w-full bg-primary py-6 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-pink-600 transition-all flex items-center justify-center gap-3"
+                    className="w-full py-6 rounded-2xl font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-3"
+                    style={{ backgroundColor: '#D14D72', color: 'white' }}
                   >
                     {loading
                       ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
@@ -480,7 +522,8 @@ function BookingContent() {
             <button
               disabled={step === 1 ? selectedServices.length === 0 : !selectedDate || !selectedTime}
               onClick={() => { setBookingError(null); setStep(step + 1); }}
-              className="btn-primary flex-1 py-5 text-[10px]"
+              className="flex-1 py-5 text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all"
+              style={{ backgroundColor: '#D14D72', color: 'white' }}
             >
               {step === 1 ? 'ВЫБРАТЬ ВРЕМЯ' : 'ДАЛЕЕ'}
             </button>
