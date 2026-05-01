@@ -1,9 +1,12 @@
 export type Profile = {
   id: string;
-  phone: string;
+  phone: string | null;
   name: string | null;
   role: 'client' | 'admin';
   telegram_chat_id: string | null;
+  telegram_id: number | null;
+  telegram_username: string | null;
+  telegram_photo: string | null;
   created_at: string;
 };
 
