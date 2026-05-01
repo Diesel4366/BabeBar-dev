@@ -4,6 +4,7 @@ import { ServicesGrid } from '@/components/client/ServicesGrid';
 import { Header } from '@/components/shared/Header';
 import { BookingCTA } from '@/components/client/BookingCTA';
 import { Advantages } from '@/components/client/Advantages';
+import { SITE_CONFIG } from '@/lib/config';
 import { Camera, MapPin, Phone } from 'lucide-react';
 import Link from 'next/link';
 
@@ -34,10 +35,10 @@ export default async function Home() {
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { id: 1, url: 'https://www.instagram.com/babe_bar_nn/' },
-              { id: 2, url: 'https://www.instagram.com/babe_bar_nn/' },
-              { id: 3, url: 'https://www.instagram.com/babe_bar_nn/' },
-              { id: 4, url: 'https://www.instagram.com/babe_bar_nn/' },
+              { id: 1, url: SITE_CONFIG.instagramUrl },
+              { id: 2, url: SITE_CONFIG.instagramUrl },
+              { id: 3, url: SITE_CONFIG.instagramUrl },
+              { id: 4, url: SITE_CONFIG.instagramUrl },
             ].map((item) => (
               <Link 
                 key={item.id} 
@@ -67,8 +68,8 @@ export default async function Home() {
           </div>
 
           <div className="mt-16 text-center">
-            <Link 
-              href="https://www.instagram.com/babe_bar_nn/" 
+            <Link
+              href={SITE_CONFIG.instagramUrl}
               target="_blank"
               className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400 hover:text-primary transition-colors"
             >
@@ -97,15 +98,15 @@ export default async function Home() {
                     <MapPin size={20} />
                   </div>
                   <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-300">Адрес студии</h4>
-                  <p className="font-bold text-lg text-[#0A0A0A]">Ул. Красоты, 13, Москва</p>
+                  <p className="font-bold text-lg text-[#0A0A0A]">{SITE_CONFIG.address}</p>
                 </div>
-                
+
                 <div className="space-y-2 group">
                   <div className="w-10 h-10 bg-zinc-50 rounded-xl flex items-center justify-center text-zinc-400 group-hover:bg-primary group-hover:text-white transition-all duration-300">
                     <Phone size={20} />
                   </div>
                   <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-300">Телефон</h4>
-                  <p className="font-bold text-lg text-[#0A0A0A]">+7 (999) 000-00-00</p>
+                  <p className="font-bold text-lg text-[#0A0A0A]">{SITE_CONFIG.phone}</p>
                 </div>
 
                 <div className="space-y-2 group">
@@ -113,7 +114,7 @@ export default async function Home() {
                     <Camera size={20} />
                   </div>
                   <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-300">Instagram</h4>
-                  <p className="font-bold text-lg text-[#0A0A0A]">@babe_bar_nn</p>
+                  <p className="font-bold text-lg text-[#0A0A0A]">{SITE_CONFIG.instagram}</p>
                 </div>
               </div>
             </div>

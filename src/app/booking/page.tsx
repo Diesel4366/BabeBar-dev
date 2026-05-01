@@ -19,6 +19,7 @@ function BookingContent() {
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [occupiedIntervals, setOccupiedIntervals] = useState<{start: string, end: string}[]>([]);
   const [formData, setFormData] = useState({ name: '', phone: '' });
+  const [workingHours, setWorkingHours] = useState<{ start: string; end: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const [success, setSuccess] = useState(false);
@@ -50,9 +51,9 @@ function BookingContent() {
           const formattedDate = selectedDate!.toISOString().split('T')[0];
           const res = await fetch(`/api/availability?date=${formattedDate}`, { cache: 'no-store' });
           const data = await res.json();
-          if (data.occupiedIntervals) {
-            setOccupiedIntervals(data.occupiedIntervals);
-          }
+          if (data.occupiedIntervals) setOccupiedIntervals(data.occupiedIntervals);
+          setWorkingHours(data.workingHours ?? null);
+          setSelectedTime(null);
         } catch (err) {
           console.error('Failed to fetch availability:', err);
         }
@@ -271,33 +272,41 @@ function BookingContent() {
               {selectedDate && (
                 <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 block mb-6">Свободное время</span>
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                    {(() => {
-                      const times = [];
-                      for (let hour = 10; hour < 21; hour++) {
-                        times.push(`${hour}:00`);
-                        times.push(`${hour}:30`);
-                      }
-                      return times.map(time => {
-                        const isSelected = selectedTime === time;
-                        const isAvailable = isSlotAvailable(time);
-                        return (
-                          <button
-                            key={time}
-                            disabled={!isAvailable}
-                            onClick={() => setSelectedTime(time)}
-                            className={`py-5 rounded-2xl border font-black text-sm transition-all duration-300 ${
-                              isSelected ? 'border-primary bg-primary text-white shadow-lg shadow-primary/20' : 
-                              !isAvailable ? 'border-zinc-50 bg-zinc-50 text-zinc-200 cursor-not-allowed opacity-50' :
-                              'border-white bg-white hover:border-zinc-200 shadow-sm'
-                            }`}
-                          >
-                            {time}
-                          </button>
-                        );
-                      });
-                    })()}
-                  </div>
+                  {workingHours === null ? (
+                    <div className="py-12 text-center rounded-3xl border border-zinc-100 bg-white">
+                      <p className="text-zinc-400 font-bold uppercase text-sm tracking-widest">Нерабочий день</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                      {(() => {
+                        const times: string[] = [];
+                        const [startH] = workingHours.start.split(':').map(Number);
+                        const [endH] = workingHours.end.split(':').map(Number);
+                        for (let hour = startH; hour < endH; hour++) {
+                          times.push(`${hour}:00`);
+                          times.push(`${hour}:30`);
+                        }
+                        return times.map(time => {
+                          const isSelected = selectedTime === time;
+                          const isAvailable = isSlotAvailable(time);
+                          return (
+                            <button
+                              key={time}
+                              disabled={!isAvailable}
+                              onClick={() => setSelectedTime(time)}
+                              className={`py-5 rounded-2xl border font-black text-sm transition-all duration-300 ${
+                                isSelected ? 'border-primary bg-primary text-white shadow-lg shadow-primary/20' :
+                                !isAvailable ? 'border-zinc-50 bg-zinc-50 text-zinc-200 cursor-not-allowed opacity-50' :
+                                'border-white bg-white hover:border-zinc-200 shadow-sm'
+                              }`}
+                            >
+                              {time}
+                            </button>
+                          );
+                        });
+                      })()}
+                    </div>
+                  )}
                 </motion.section>
               )}
             </motion.div>

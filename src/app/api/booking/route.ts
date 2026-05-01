@@ -129,8 +129,8 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ success: true, appointmentId: appointment.id });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Booking error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Не удалось создать запись. Попробуйте ещё раз.' }, { status: 500 });
   }
 }
