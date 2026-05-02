@@ -15,11 +15,11 @@ async function tg(method: string, body: object) {
   });
 }
 
-async function sendMsg(chatId: number, text: string, replyMarkup?: object) {
+async function sendMsg(chatId: string | number, text: string, replyMarkup?: object) {
   return tg('sendMessage', { chat_id: chatId, text, parse_mode: 'Markdown', reply_markup: replyMarkup });
 }
 
-async function editMsg(chatId: number, messageId: number, text: string, replyMarkup?: object) {
+async function editMsg(chatId: string | number, messageId: number, text: string, replyMarkup?: object) {
   return tg('editMessageText', { chat_id: chatId, message_id: messageId, text, parse_mode: 'Markdown', reply_markup: replyMarkup });
 }
 
@@ -40,8 +40,8 @@ function normalizePhone(raw: string): string {
 
 // Найти профиль по telegram_id. Если не нашли — попробовать найти по нормализованному телефону
 // и прилинковать telegram_id к нему (merge split profiles).
-async function linkOrMergeProfile(telegramId: number, phone: string, name: string | null, username: string | null) {
-  const tidStr = String(telegramId);
+async function linkOrMergeProfile(telegramId: string, phone: string, name: string | null, username: string | null) {
+  const tidStr = telegramId;
   const normalPhone = normalizePhone(phone);
 
   // 1. Ищем профиль по telegram_id
@@ -124,7 +124,7 @@ async function notifyAdmins(text: string) {
   ));
 }
 
-async function fetchAndStoreAvatar(telegramId: number, profileId: string): Promise<string | null> {
+async function fetchAndStoreAvatar(telegramId: string, profileId: string): Promise<string | null> {
   if (!TOKEN) return null;
   try {
     const r1 = await fetch(`https://api.telegram.org/bot${TOKEN}/getUserProfilePhotos?user_id=${telegramId}&limit=1`);
@@ -150,7 +150,7 @@ async function fetchAndStoreAvatar(telegramId: number, profileId: string): Promi
 
 // ─── My appointments ─────────────────────────────────────────────────────────
 
-async function handleMyAppointments(chatId: number, telegramId: number | undefined, messageId?: number) {
+async function handleMyAppointments(chatId: string | number, telegramId: string | undefined, messageId?: number) {
   const reply = (text: string, markup?: object) =>
     messageId ? editMsg(chatId, messageId, text, markup) : sendMsg(chatId, text, markup);
 
@@ -160,7 +160,7 @@ async function handleMyAppointments(chatId: number, telegramId: number | undefin
   }
 
   const { data: profile } = await supabaseAdmin
-    .from('profiles').select('id').eq('telegram_id', String(telegramId)).maybeSingle();
+    .from('profiles').select('id').eq('telegram_id', telegramId).maybeSingle();
 
   if (!profile) {
     await reply('Профиль не найден. Войдите на сайте [babebar.ru](https://babebar.ru).', MAIN_MENU);
@@ -197,21 +197,24 @@ export async function POST(req: Request) {
   if (!TOKEN) return NextResponse.json({ error: 'Token not set' }, { status: 500 });
 
   try {
-    const body = await req.json();
+    const rawBody = await req.text();
+    // Предотвращаем потерю точности для длинных Telegram ID (превращаем числа > 15 знаков в строки)
+    const safeBody = rawBody.replace(/:\s*(\d{15,})/g, ': "$1"');
+    const body = JSON.parse(safeBody);
     const { message, callback_query } = body;
 
     // ── Text messages ─────────────────────────────────────────────────────────
     if (message) {
-      const chatId: number = message.chat.id;
+      const chatId: string | number = message.chat.id;
       const text: string | undefined = message.text;
-      const telegramId: number | undefined = message.from?.id;
+      const telegramId: string | undefined = message.from?.id;
 
       if (text === '/start' || text === '/menu') {
         await sendMsg(chatId, 'Добро пожаловать в *BABEBAR!* 🌟\n\nЗдесь вы можете записаться на услуги или посмотреть свои записи.', MAIN_MENU);
 
         if (telegramId) {
           const { data: profile } = await supabaseAdmin
-            .from('profiles').select('id, telegram_photo, phone').eq('telegram_id', String(telegramId)).maybeSingle();
+            .from('profiles').select('id, telegram_photo, phone').eq('telegram_id', telegramId).maybeSingle();
 
           let profileId = profile?.id;
 
@@ -221,7 +224,7 @@ export async function POST(req: Request) {
               .from('profiles')
               .insert({
                 id: crypto.randomUUID(),
-                telegram_id: String(telegramId),
+                telegram_id: telegramId,
                 name: message.from?.first_name ?? null,
                 telegram_username: message.from?.username ?? null,
               })
@@ -275,10 +278,10 @@ export async function POST(req: Request) {
 
     // ── Callbacks ─────────────────────────────────────────────────────────────
     if (callback_query) {
-      const chatId: number = callback_query.message.chat.id;
+      const chatId: string | number = callback_query.message.chat.id;
       const data: string = callback_query.data;
       const messageId: number = callback_query.message.message_id;
-      const telegramId: number | undefined = callback_query.from?.id;
+      const telegramId: string | undefined = callback_query.from?.id;
 
       await tg('answerCallbackQuery', { callback_query_id: callback_query.id });
 
@@ -388,7 +391,7 @@ export async function POST(req: Request) {
 
         const [{ data: service }, { data: profile }] = await Promise.all([
           supabaseAdmin.from('services').select('name, price, duration_minutes').eq('id', serviceId).single(),
-          supabaseAdmin.from('profiles').select('id, name, phone').eq('telegram_id', String(telegramId)).maybeSingle(),
+          supabaseAdmin.from('profiles').select('id, name, phone').eq('telegram_id', telegramId).maybeSingle(),
         ]);
 
         if (!service) {
