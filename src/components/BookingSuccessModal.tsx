@@ -145,7 +145,7 @@ export default function BookingSuccessModal({ isOpen, onClose, data }: BookingSu
                   </button>
                   <button
                     onClick={onClose}
-                    className="w-full py-5 rounded-2xl bg-white border border-zinc-100 text-[10px] font-black uppercase tracking-widest hover:bg-zinc-50 transition-all text-zinc-400"
+                    className="w-full py-5 rounded-2xl bg-zinc-100 text-[#0A0A0A] font-black text-[10px] uppercase tracking-widest hover:bg-zinc-200 transition-all shadow-sm"
                   >
                     Закрыть
                   </button>

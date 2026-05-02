@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
@@ -10,9 +10,12 @@ import {
   Scissors, 
   Settings, 
   LogOut,
-  ExternalLink
+  ExternalLink,
+  Menu,
+  X
 } from 'lucide-react';
 import LogoutButton from './LogoutButton';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const MENU_ITEMS = [
   { name: 'Дашборд', icon: LayoutDashboard, href: '/admin' },
@@ -24,11 +27,14 @@ const MENU_ITEMS = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const [isOpen, setIsOpen] = useState(false);
 
-  return (
-    <aside className="fixed inset-y-0 left-0 w-72 bg-[#0A0A0A] text-white flex flex-col z-50">
+  const toggleSidebar = () => setIsOpen(!isOpen);
+
+  const SidebarContent = () => (
+    <>
       <div className="p-8">
-        <Link href="/admin" className="flex flex-col gap-1 group">
+        <Link href="/admin" className="flex flex-col gap-1 group" onClick={() => setIsOpen(false)}>
           <span className="text-2xl font-black uppercase tracking-tighter leading-none group-hover:text-primary transition-colors">
             BABE<span className="text-primary italic">BAR</span>
           </span>
@@ -45,6 +51,7 @@ export default function Sidebar() {
             <Link
               key={item.name}
               href={item.href}
+              onClick={() => setIsOpen(false)}
               className={`
                 flex items-center gap-4 px-6 py-4 rounded-2xl transition-all duration-300 group
                 ${isActive 
@@ -72,6 +79,47 @@ export default function Sidebar() {
         </Link>
         <LogoutButton isSidebar />
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile Trigger */}
+      <button 
+        onClick={toggleSidebar}
+        className="lg:hidden fixed top-6 left-6 z-[60] w-12 h-12 bg-[#0A0A0A] text-white rounded-2xl flex items-center justify-center shadow-lg border border-white/5 shadow-black/20"
+      >
+        {isOpen ? <X size={24} /> : <Menu size={24} />}
+      </button>
+
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:flex fixed inset-y-0 left-0 w-72 bg-[#0A0A0A] text-white flex-col z-50 border-r border-white/5">
+        <SidebarContent />
+      </aside>
+
+      {/* Mobile Sidebar Overlay */}
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsOpen(false)}
+              className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+            />
+            <motion.aside 
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="lg:hidden fixed inset-y-0 left-0 w-72 bg-[#0A0A0A] text-white flex flex-col z-[55] shadow-2xl"
+            >
+              <SidebarContent />
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
