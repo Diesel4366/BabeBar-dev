@@ -25,9 +25,9 @@ async function getDashboardData() {
     const monthStart = today.substring(0, 7) + '-01';
 
     const [todayActiveRes, todayCancelledRes, todayCompletedRes, monthClientsRes, revenueRes, upcomingRes] = await Promise.all([
-      // Статусы на сегодня
+      // Статусы на сегодня (считаем все виды отмен)
       supabaseAdmin.from('appointments').select('*', { count: 'exact', head: true }).eq('date', today).eq('status', 'active'),
-      supabaseAdmin.from('appointments').select('*', { count: 'exact', head: true }).eq('date', today).eq('status', 'cancelled'),
+      supabaseAdmin.from('appointments').select('*', { count: 'exact', head: true }).eq('date', today).ilike('status', 'cancelled%'),
       supabaseAdmin.from('appointments').select('*', { count: 'exact', head: true }).eq('date', today).eq('status', 'completed'),
       
       // Клиенты за месяц
@@ -36,14 +36,14 @@ async function getDashboardData() {
       // Выручка
       supabaseAdmin.from('appointments').select('total_price').gte('date', monthStart).eq('status', 'completed'),
 
-      // Записи на сегодня (исключая отмененные для списка)
+      // Записи на сегодня (только активные и завершенные)
       supabaseAdmin.from('appointments').select(`
           id, start_time, end_time, status, total_price,
           profiles (name, telegram_username, phone),
           appointment_services (services (name))
         `)
         .eq('date', today)
-        .neq('status', 'cancelled')
+        .in('status', ['active', 'completed'])
         .order('start_time', { ascending: true })
     ]);
 
@@ -81,12 +81,11 @@ export default async function AdminDashboard() {
   const data = await getDashboardData();
 
   const getStatusInfo = (status: string) => {
-    switch (status) {
-      case 'active': return { label: 'Ожидается', color: 'text-blue-500', bg: 'bg-blue-500' };
-      case 'completed': return { label: 'Завершено', color: 'text-green-500', bg: 'bg-green-500' };
-      case 'cancelled': return { label: 'Отменено', color: 'text-red-500', bg: 'bg-red-500' };
-      default: return { label: status, color: 'text-zinc-400', bg: 'bg-zinc-400' };
-    }
+    const s = status.toLowerCase();
+    if (s === 'active') return { label: 'Ожидается', color: 'text-blue-500', bg: 'bg-blue-500' };
+    if (s === 'completed') return { label: 'Завершено', color: 'text-green-500', bg: 'bg-green-500' };
+    if (s.includes('cancelled')) return { label: 'Отменено', color: 'text-red-500', bg: 'bg-red-500' };
+    return { label: status, color: 'text-zinc-400', bg: 'bg-zinc-400' };
   };
 
   return (
