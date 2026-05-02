@@ -23,7 +23,8 @@ interface User {
   id: string;
   name: string | null;
   phone: string | null;
-  telegram_id: number | null;
+  telegram_id: string | null;
+  oidc_id: string | null;
   telegram_username: string | null;
   telegram_photo: string | null;
   created_at: string | null;
@@ -211,8 +212,32 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Hint: add phone via bot (only if no phone) */}
-        {!user?.phone && (
+        {/* Connection CTA (only if no telegram_id) */}
+        {!user?.telegram_id && (
+          <div className="bg-white rounded-[2rem] border-2 border-dashed border-[#D14D7240] p-8 text-center space-y-6">
+            <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto text-3xl" style={{ backgroundColor: '#D14D7218' }}>
+              🤖
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-lg font-black uppercase tracking-tight">Подключите бота</h3>
+              <p className="text-zinc-500 text-sm font-medium leading-relaxed">
+                Чтобы записываться онлайн и получать уведомления, нужно связать ваш профиль с Telegram ботом.
+              </p>
+            </div>
+            <a 
+              href={`https://t.me/BabeBar_bot?start=${user?.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-3 py-4 px-8 rounded-2xl font-black text-xs uppercase tracking-widest text-white transition-all hover:opacity-90 active:scale-95 shadow-lg shadow-[#D14D7220]"
+              style={{ backgroundColor: '#D14D72' }}
+            >
+              Подключить @BabeBar_bot
+            </a>
+          </div>
+        )}
+
+        {/* Hint: add phone via bot (only if telegram_id exists but no phone) */}
+        {user?.telegram_id && !user?.phone && (
           <div className="bg-white rounded-[2rem] border border-zinc-100 p-5 flex items-start gap-4">
             <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-base" style={{ backgroundColor: '#D14D7218' }}>
               📱
@@ -220,12 +245,7 @@ export default function ProfilePage() {
             <div>
               <div className="text-xs font-black uppercase tracking-widest">Добавить телефон</div>
               <div className="text-zinc-400 text-sm font-medium mt-1 leading-relaxed">
-                Напишите{' '}
-                <a href="https://t.me/BabeBar_bot" target="_blank" rel="noopener noreferrer"
-                  className="font-black" style={{ color: '#D14D72' }}>
-                  @BabeBar_bot
-                </a>
-                {' '}команду <span className="font-black">/start</span>
+                Напишите боту <span className="font-black">/start</span> и отправьте свой контакт для завершения профиля.
               </div>
             </div>
           </div>

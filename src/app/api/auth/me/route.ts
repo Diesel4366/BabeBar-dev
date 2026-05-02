@@ -13,7 +13,7 @@ export async function GET() {
 
   const { data } = await supabaseAdmin
     .from('profiles')
-    .select('id, name, phone, telegram_id, telegram_username, telegram_photo, created_at')
+    .select('id, name, phone, telegram_id, oidc_id, telegram_username, telegram_photo, created_at')
     .eq('id', profileId)
     .single();
 

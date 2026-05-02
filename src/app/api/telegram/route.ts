@@ -209,13 +209,37 @@ export async function POST(req: Request) {
       const text: string | undefined = message.text;
       const telegramId: string | undefined = message.from?.id;
 
-      if (text === '/start' || text === '/menu') {
-        await sendMsg(chatId, 'Добро пожаловать в *BABEBAR!* 🌟\n\nЗдесь вы можете записаться на услуги или посмотреть свои записи.', MAIN_MENU);
+      // ── Handle /start with ID ──────────────────────────────────────────────
+      if (text?.startsWith('/start ')) {
+        const profileId = text.split(' ')[1]; // Получаем ID профиля из ссылки
+        if (profileId && telegramId) {
+          // Привязываем этот Telegram ID к профилю
+          const { error } = await supabaseAdmin
+            .from('profiles')
+            .update({ 
+              telegram_id: telegramId,
+              telegram_username: message.from?.username ?? null,
+              telegram_chat_id: String(chatId)
+            })
+            .eq('id', profileId);
+
+          if (!error) {
+            await sendMsg(chatId, '✅ *Аккаунт успешно связан!*\n\nТеперь вы можете смотреть свои записи и записываться онлайн. Не забудьте поделиться номером телефона ниже.');
+          } else {
+            await sendMsg(chatId, '❌ Ошибка при связывании аккаунта. Попробуйте ещё раз из личного кабинета.');
+          }
+        }
+      }
+
+      if (text === '/start' || text === '/menu' || text?.startsWith('/start ')) {
+        if (!text?.startsWith('/start ')) {
+          await sendMsg(chatId, 'Добро пожаловать в *BABEBAR!* 🌟\n\nЗдесь вы можете записаться на услуги или посмотреть свои записи.', MAIN_MENU);
+        }
 
         if (telegramId) {
           const { data: profile } = await supabaseAdmin
-            .from('profiles').select('id, telegram_photo, phone').eq('telegram_id', telegramId).maybeSingle();
-
+            .from('profiles').select('id, telegram_photo, phone, telegram_id').eq('telegram_id', telegramId).maybeSingle();
+    ...
           let profileId = profile?.id;
 
           if (!profileId) {

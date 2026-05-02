@@ -69,12 +69,12 @@ export async function GET(req: Request) {
     if (!valid) return fail('Hash verification failed');
   }
 
-  const telegramId = tgData.id; // Работаем как со строкой!
+  const oidcId = tgData.id; // Это зашифрованный ID от OIDC
 
   const { data: existing } = await supabaseAdmin
     .from('profiles')
     .select('id')
-    .eq('telegram_id', telegramId)
+    .eq('oidc_id', oidcId)
     .maybeSingle();
 
   let profileId: string;
@@ -91,7 +91,7 @@ export async function GET(req: Request) {
       .from('profiles')
       .insert({
         id: crypto.randomUUID(),
-        telegram_id: telegramId,
+        oidc_id: oidcId,
         name: tgData.first_name ?? null,
         telegram_username: tgData.username ?? null,
         telegram_photo: tgData.photo_url ?? null,

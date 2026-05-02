@@ -5,6 +5,7 @@ export type Profile = {
   role: 'client' | 'admin';
   telegram_chat_id: string | null;
   telegram_id: string | null;
+  oidc_id: string | null;
   telegram_username: string | null;
   telegram_photo: string | null;
   created_at: string;
