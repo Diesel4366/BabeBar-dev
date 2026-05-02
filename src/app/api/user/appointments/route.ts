@@ -41,7 +41,11 @@ export async function DELETE(req: Request) {
 
   const { data: appt } = await supabaseAdmin
     .from('appointments')
-    .select('id, client_id, date, status')
+    .select(`
+      id, date, start_time, status,
+      profiles(name, phone, telegram_username),
+      appointment_services(services(name))
+    `)
     .eq('id', id)
     .eq('client_id', profileId)
     .single();
@@ -55,5 +59,38 @@ export async function DELETE(req: Request) {
     .eq('id', id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Уведомление мастерам об отмене
+  const telegramToken = process.env.TELEGRAM_TOKEN;
+  const rawChatIds = process.env.TELEGRAM_ADMIN_CHAT_IDS ?? '';
+  const chatIds = rawChatIds.split(',').map(s => s.trim()).filter(Boolean);
+
+  if (telegramToken && chatIds.length > 0) {
+    try {
+      const client = (appt as any).profiles;
+      const dateFormatted = new Date(appt.date + 'T12:00:00').toLocaleDateString('ru-RU', {
+        day: 'numeric', month: 'long', weekday: 'long',
+      });
+      const services = (appt as any).appointment_services
+        .map((s: any) => s.services?.name).filter(Boolean).join(', ');
+
+      let message = `🔴 *ОТМЕНА ЗАПИСИ!*\n\n👤 *Клиент:* ${client?.name || '—'}\n📞 *Телефон:* ${client?.phone || '—'}`;
+      if (client?.telegram_username) {
+        message += `\n✈️ *Telegram:* @${client.telegram_username}`;
+      }
+      message += `\n📅 *Дата:* ${dateFormatted}\n⏰ *Время:* ${appt.start_time.substring(0, 5)}\n💅 *Услуги:* ${services}`;
+
+      await Promise.allSettled(chatIds.map(chatId =>
+        fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: 'Markdown' }),
+        })
+      ));
+    } catch (e) {
+      console.error('Failed to send cancel notification:', e);
+    }
+  }
+
   return NextResponse.json({ ok: true });
 }
