@@ -10,8 +10,6 @@ import {
   Trash2, 
   Edit3, 
   History,
-  ArrowDownCircle,
-  ArrowUpCircle,
   Scale,
   Loader2,
   X
@@ -186,7 +184,7 @@ export default function InventoryPage() {
               placeholder="Поиск по названию..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-zinc-50 border-none rounded-2xl py-5 pl-16 pr-6 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all"
+              className="w-full bg-zinc-50 border-none rounded-2xl py-5 pl-16 pr-6 text-sm font-medium focus:ring-2 focus:ring-[#D14D72]/20 transition-all"
             />
           </div>
           
@@ -263,7 +261,7 @@ export default function InventoryPage() {
                         <div className="flex justify-end gap-2">
                           <button 
                             onClick={() => handleOpenModal(item)}
-                            className="p-3 rounded-xl bg-zinc-50 text-zinc-400 hover:text-primary transition-colors"
+                            className="p-3 rounded-xl bg-zinc-50 text-zinc-400 hover:text-[#D14D72] transition-colors"
                           >
                             <Edit3 size={16} />
                           </button>
@@ -388,8 +386,5 @@ export default function InventoryPage() {
         )}
       </AnimatePresence>
     </div>
-  );
-}
- </div>
   );
 }
