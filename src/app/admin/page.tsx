@@ -36,13 +36,14 @@ async function getDashboardData() {
       // Выручка
       supabaseAdmin.from('appointments').select('total_price').gte('date', monthStart).eq('status', 'completed'),
 
-      // Записи на сегодня
+      // Записи на сегодня (исключая отмененные для списка)
       supabaseAdmin.from('appointments').select(`
           id, start_time, end_time, status, total_price,
           profiles (name, telegram_username, phone),
           appointment_services (services (name))
         `)
         .eq('date', today)
+        .neq('status', 'cancelled')
         .order('start_time', { ascending: true })
     ]);
 
@@ -184,7 +185,7 @@ export default async function AdminDashboard() {
                 const sInfo = getStatusInfo(appt.status);
 
                 return (
-                  <div key={appt.id} className={`bg-white p-5 md:p-6 rounded-[1.8rem] md:rounded-[2rem] border border-zinc-100 flex flex-col sm:flex-row items-start sm:items-center justify-between hover:shadow-md transition-all group/item gap-4 ${appt.status === 'cancelled' ? 'opacity-50' : ''}`}>
+                  <div key={appt.id} className="bg-white p-5 md:p-6 rounded-[1.8rem] md:rounded-[2rem] border border-zinc-100 flex flex-col sm:flex-row items-start sm:items-center justify-between hover:shadow-md transition-all group/item gap-4">
                     <div className="flex items-center gap-4 md:gap-6">
                       <div className="text-center min-w-[50px] md:min-w-[60px]">
                         <div className="text-base md:text-lg font-black leading-none">{appt.start_time.substring(0, 5)}</div>
