@@ -12,14 +12,13 @@ export default async function LoginPage(props: { searchParams: Promise<{ error?:
   }
 
   const sp = await props.searchParams;
-  const hasError = !!sp.error;
+  const errorMsg = sp.error;
+  const hasError = !!errorMsg;
 
-  // ЭТО НОВЫЙ МЕТОД (OpenID Connect / Direct Auth)
   // Используем Client ID из вашего скриншота
   const clientId = '8752821995';
   const redirectUri = 'https://babebar.ru/api/auth/telegram/callback';
   
-  // Правильный URL для нового метода авторизации
   const telegramAuthUrl = `https://oauth.telegram.org/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=openid+profile`;
 
   return (
@@ -35,8 +34,8 @@ export default async function LoginPage(props: { searchParams: Promise<{ error?:
         </div>
 
         {hasError && (
-          <div className="mb-6 p-4 rounded-2xl bg-red-50 border border-red-100 text-red-500 text-xs font-bold text-center uppercase tracking-widest">
-            Ошибка авторизации — попробуйте ещё раз
+          <div className="mb-6 p-4 rounded-2xl bg-red-50 border border-red-100 text-red-500 text-[10px] font-bold text-center uppercase tracking-widest leading-relaxed">
+            {errorMsg === '1' ? 'Ошибка авторизации — попробуйте ещё раз' : `Ошибка: ${decodeURIComponent(errorMsg)}`}
           </div>
         )}
 
@@ -47,7 +46,7 @@ export default async function LoginPage(props: { searchParams: Promise<{ error?:
             style={{ backgroundColor: '#2AABEE' }}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
-              <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248l-2.012 9.483c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L6.48 14.51l-2.95-.924c-.642-.2-.654-.642.136-.953l11.527-4.445c.535-.194 1.003.13.37.06z"/>
+              <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248l-2.012 9.483c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L6.48 14.51l-2.95-.924c-.642-.2-.654-.642.136-.953l11.527-4.445c.535-.194 1.003.13.37.06z\"/>
             </svg>
             Войти через Telegram
           </a>
@@ -74,7 +73,7 @@ export default async function LoginPage(props: { searchParams: Promise<{ error?:
           </Link>
         </p>
         <p className="text-center mt-2 text-[8px] text-zinc-200 uppercase tracking-[0.3em]">
-          v.02.80.debug
+          v.02.85.error-tracking
         </p>
       </div>
     </div>

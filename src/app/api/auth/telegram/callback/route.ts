@@ -7,7 +7,8 @@ export async function GET(req: Request) {
   const origin = url.origin;
   const fail = (msg?: string) => {
     console.error('Auth fail:', msg);
-    return NextResponse.redirect(new URL('/login?error=1', origin));
+    const errorParam = msg ? encodeURIComponent(msg) : '1';
+    return NextResponse.redirect(new URL(`/login?error=${errorParam}`, origin));
   };
 
   let tgData: Record<string, string> = {};
