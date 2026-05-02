@@ -49,6 +49,7 @@ export async function POST(req: Request) {
     if (message) {
       const chatId = message.chat.id;
       const text = message.text;
+      const telegramId = message.from?.id;
 
       if (text === '/start') {
         await sendTelegramMessage(chatId, 'Добро пожаловать в BABEBAR! 🌟\n\nЯ помогу вам записаться на наши услуги. Выберите действие ниже:', {
@@ -58,23 +59,63 @@ export async function POST(req: Request) {
           ]
         });
 
-        // Обновляем фото профиля если его нет
-        const telegramId = message.from?.id;
         if (telegramId) {
           const { data: profile } = await supabaseAdmin
             .from('profiles')
-            .select('id, telegram_photo')
+            .select('id, telegram_photo, phone')
             .eq('telegram_id', String(telegramId))
             .maybeSingle();
 
-          if (profile && !profile.telegram_photo) {
-            const photoUrl = await fetchAndStoreAvatar(telegramId, profile.id);
-            if (photoUrl) {
-              await supabaseAdmin.from('profiles')
-                .update({ telegram_photo: photoUrl })
-                .eq('id', profile.id);
+          if (profile) {
+            // Загружаем фото если нет
+            if (!profile.telegram_photo) {
+              const photoUrl = await fetchAndStoreAvatar(telegramId, profile.id);
+              if (photoUrl) {
+                await supabaseAdmin.from('profiles').update({ telegram_photo: photoUrl }).eq('id', profile.id);
+              }
+            }
+            // Запрашиваем телефон если не заполнен
+            if (!profile.phone) {
+              await sendTelegramMessage(chatId,
+                '📱 Поделитесь номером телефона, чтобы при записи через сайт ваши данные заполнялись автоматически.\n\nИли введите номер вручную в формате +7 999 000-00-00',
+                {
+                  keyboard: [[{ text: '📱 Поделиться номером', request_contact: true }]],
+                  resize_keyboard: true,
+                  one_time_keyboard: true,
+                }
+              );
             }
           }
+        }
+      }
+
+      // Пользователь поделился контактом через кнопку
+      if (message.contact && telegramId) {
+        const rawPhone = message.contact.phone_number ?? '';
+        const phone = rawPhone.startsWith('+') ? rawPhone : `+${rawPhone}`;
+        await supabaseAdmin.from('profiles')
+          .update({ phone })
+          .eq('telegram_id', String(telegramId));
+        await sendTelegramMessage(chatId,
+          '✅ Телефон сохранён! Теперь при записи через сайт ваши данные будут заполнены автоматически.',
+          { remove_keyboard: true }
+        );
+      }
+
+      // Пользователь ввёл телефон вручную
+      if (text && telegramId && !text.startsWith('/')) {
+        const digits = text.replace(/\D/g, '');
+        if (digits.length >= 10 && digits.length <= 12) {
+          const phone = digits.length === 11 && digits.startsWith('8')
+            ? `+7${digits.slice(1)}`
+            : digits.startsWith('7') ? `+${digits}` : `+7${digits}`;
+          await supabaseAdmin.from('profiles')
+            .update({ phone })
+            .eq('telegram_id', String(telegramId));
+          await sendTelegramMessage(chatId,
+            '✅ Телефон сохранён! Теперь при записи через сайт ваши данные будут заполнены автоматически.',
+            { remove_keyboard: true }
+          );
         }
       }
     }

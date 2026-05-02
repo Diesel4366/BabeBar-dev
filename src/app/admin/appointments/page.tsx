@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Calendar, Clock, User, Phone,
-  CheckCircle2, XCircle, ChevronLeft, Search, Filter, X,
+  CheckCircle2, XCircle, ChevronLeft, Search, Filter, X, Send,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
@@ -17,7 +17,7 @@ interface AppointmentItem {
   endTime: string;
   status: AppointmentStatus;
   totalPrice: number;
-  client: { name: string; phone: string };
+  client: { name: string; phone: string; telegram_username?: string | null };
   services: { name: string }[];
 }
 
@@ -224,8 +224,20 @@ export default function AdminAppointments() {
                         <div className="flex flex-wrap gap-4 text-xs font-bold text-zinc-400">
                           <div className="flex items-center gap-2">
                             <Phone size={14} className="text-primary" />
-                            <span>{app.client?.phone}</span>
+                            <span>{app.client?.phone || '—'}</span>
                           </div>
+                          {app.client?.telegram_username && (
+                            <a
+                              href={`https://t.me/${app.client.telegram_username}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 transition-opacity hover:opacity-70"
+                              style={{ color: '#2AABEE' }}
+                            >
+                              <Send size={13} />
+                              @{app.client.telegram_username}
+                            </a>
+                          )}
                           <div className="flex items-center gap-2">
                             <Calendar size={14} className="text-primary" />
                             <span>{new Date(app.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}</span>

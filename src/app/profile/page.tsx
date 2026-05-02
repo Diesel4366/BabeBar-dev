@@ -22,6 +22,7 @@ interface Appointment {
 interface User {
   id: string;
   name: string | null;
+  phone: string | null;
   telegram_id: number | null;
   telegram_username: string | null;
   telegram_photo: string | null;
@@ -165,26 +166,29 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Hint: get photo */}
-        {(!user?.telegram_photo || photoError) && (
+        {/* Hint: complete profile via bot */}
+        {((!user?.telegram_photo || photoError) || !user?.phone) && (
           <div className="bg-white rounded-[2rem] border border-zinc-100 p-5 flex items-start gap-4">
             <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-base" style={{ backgroundColor: '#D14D7218' }}>
-              📸
+              ✨
             </div>
-            <div>
-              <div className="text-xs font-black uppercase tracking-widest">Добавить фото профиля</div>
-              <div className="text-zinc-400 text-sm font-medium mt-1 leading-relaxed">
-                Напишите боту{' '}
-                <a
-                  href="https://t.me/BabeBar_bot"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-black"
-                  style={{ color: '#D14D72' }}
-                >
+            <div className="space-y-1">
+              <div className="text-xs font-black uppercase tracking-widest">Заполнить профиль</div>
+              <div className="text-zinc-400 text-sm font-medium leading-relaxed">
+                Напишите{' '}
+                <a href="https://t.me/BabeBar_bot" target="_blank" rel="noopener noreferrer"
+                  className="font-black" style={{ color: '#D14D72' }}>
                   @BabeBar_bot
                 </a>
-                {' '}команду <span className="font-black">/start</span> — фото загрузится автоматически
+                {' '}команду <span className="font-black">/start</span>
+              </div>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
+                {(!user?.telegram_photo || photoError) && (
+                  <span className="text-[10px] font-black uppercase tracking-widest text-zinc-300">📸 Фото</span>
+                )}
+                {!user?.phone && (
+                  <span className="text-[10px] font-black uppercase tracking-widest text-zinc-300">📱 Телефон</span>
+                )}
               </div>
             </div>
           </div>

@@ -7,7 +7,7 @@ export async function GET() {
       .from('appointments')
       .select(`
         *,
-        client:profiles(name, phone),
+        client:profiles(name, phone, telegram_username),
         services:appointment_services(
           service:services(id, name, price, duration_minutes)
         )
