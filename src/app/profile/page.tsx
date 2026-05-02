@@ -47,6 +47,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [photoError, setPhotoError] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -112,27 +113,22 @@ export default function ProfilePage() {
         {/* User card */}
         <div className="bg-white rounded-[2rem] border border-zinc-100 shadow-sm p-8 space-y-6">
           <div className="flex items-center gap-5">
-            {user?.telegram_photo ? (
+            {user?.telegram_photo && !photoError ? (
               <img
                 src={user.telegram_photo}
                 alt=""
-                className="w-16 h-16 rounded-full object-cover flex-shrink-0 ring-2 ring-[#D14D72]"
-                style={{}}
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).style.display = 'none';
-                  (e.currentTarget.nextElementSibling as HTMLElement | null)?.style.setProperty('display', 'flex');
-                }}
+                className="w-16 h-16 rounded-full object-cover flex-shrink-0"
+                style={{ outline: '2px solid #D14D72', outlineOffset: '2px' }}
+                onError={() => setPhotoError(true)}
               />
-            ) : null}
-            <div
-              className="w-16 h-16 rounded-full items-center justify-center text-white text-2xl font-black flex-shrink-0"
-              style={{
-                backgroundColor: '#D14D72',
-                display: user?.telegram_photo ? 'none' : 'flex',
-              }}
-            >
-              {user?.name?.[0]?.toUpperCase() ?? '?'}
-            </div>
+            ) : (
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center text-white text-2xl font-black flex-shrink-0"
+                style={{ backgroundColor: '#D14D72' }}
+              >
+                {user?.name?.[0]?.toUpperCase() ?? '?'}
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <div className="font-black text-xl uppercase tracking-tight truncate">{user?.name ?? 'Пользователь'}</div>
               {user?.telegram_username && (
@@ -205,11 +201,13 @@ export default function ProfilePage() {
           </section>
         )}
 
-        <div className="text-center">
-          <Link href="/booking" className="inline-block py-4 px-8 rounded-2xl font-black text-xs uppercase tracking-widest text-white transition-all hover:opacity-90" style={{ backgroundColor: '#D14D72' }}>
-            Новая запись
-          </Link>
-        </div>
+        {upcoming.length > 0 && (
+          <div className="text-center">
+            <Link href="/booking" className="inline-block py-4 px-8 rounded-2xl font-black text-xs uppercase tracking-widest text-white transition-all hover:opacity-90" style={{ backgroundColor: '#D14D72' }}>
+              Новая запись
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Cancel confirm modal */}
