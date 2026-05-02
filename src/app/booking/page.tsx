@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Clock, CheckCircle2, Phone, User, Star, ArrowRight, Plus } from 'lucide-react';
+import { ChevronLeft, Clock, CheckCircle2, Phone, User, Star, ArrowRight, Plus, LogIn } from 'lucide-react';
 import Link from 'next/link';
 import { Service } from '@/types';
 import { CATEGORY_ORDER } from '@/lib/config';
@@ -22,6 +22,7 @@ function BookingContent() {
   const [occupiedIntervals, setOccupiedIntervals] = useState<{ start: string; end: string }[]>([]);
   const [workingHours, setWorkingHours] = useState<{ start: string; end: string } | null>(null);
   const [formData, setFormData] = useState({ name: '', phone: '' });
+  const [authUser, setAuthUser] = useState<{ name: string | null; phone: string | null } | null | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const [success, setSuccess] = useState(false);
@@ -34,6 +35,31 @@ function BookingContent() {
   const bookingCategories = CATEGORY_ORDER.filter(cat => mainServices.some(s => s.category === cat));
   const mainServicesForCategory = mainServices.filter(s => s.category === activeBookingCategory);
   const categoryAddons = addonServices.filter(s => s.addon_for_category === activeBookingCategory);
+
+  useEffect(() => {
+    fetch('/api/auth/me').then(r => r.json()).then(me => {
+      if (me) {
+        setAuthUser({ name: me.name, phone: me.phone ?? '' });
+        setFormData({ name: me.name ?? '', phone: me.phone ?? '' });
+        // Восстанавливаем состояние если вернулись после авторизации
+        if (searchParams.get('restore')) {
+          try {
+            const saved = sessionStorage.getItem('booking_state');
+            if (saved) {
+              const s = JSON.parse(saved);
+              if (s.selectedServices) setSelectedServices(s.selectedServices);
+              if (s.selectedDate) setSelectedDate(new Date(s.selectedDate));
+              if (s.selectedTime) setSelectedTime(s.selectedTime);
+              if (s.step) setStep(s.step);
+              sessionStorage.removeItem('booking_state');
+            }
+          } catch {}
+        }
+      } else {
+        setAuthUser(null);
+      }
+    });
+  }, [searchParams]);
 
   useEffect(() => {
     async function loadData() {
@@ -112,6 +138,17 @@ function BookingContent() {
     const newStart = toMins(time);
     const newEnd = newStart + totalDuration;
     return !occupiedIntervals.some(iv => newStart < toMins(iv.end) && newEnd > toMins(iv.start));
+  };
+
+  const handleTelegramLogin = () => {
+    sessionStorage.setItem('booking_state', JSON.stringify({
+      selectedServices,
+      selectedDate: selectedDate?.toISOString() ?? null,
+      selectedTime,
+      step,
+    }));
+    const redirectUri = encodeURIComponent(`${window.location.origin}/api/auth/telegram/callback`);
+    window.location.href = `https://oauth.telegram.org/auth?client_id=8752821995&redirect_uri=${redirectUri}&response_type=code&scope=openid+profile&state=booking`;
   };
 
   const formatPhone = (value: string) => {
@@ -448,6 +485,35 @@ function BookingContent() {
 
               <form onSubmit={handleSubmit} className="space-y-12">
                 <div className="space-y-4">
+                  {/* Кнопка входа для незалогиненных */}
+                  {authUser === null && (
+                    <button
+                      type="button"
+                      onClick={handleTelegramLogin}
+                      className="w-full flex items-center justify-center gap-3 py-5 rounded-3xl border border-zinc-100 bg-white font-black text-sm uppercase tracking-widest text-zinc-600 hover:border-zinc-200 transition-all"
+                    >
+                      <LogIn size={18} style={{ color: '#D14D72' }} />
+                      Войти через Telegram
+                      <span className="text-[9px] font-black uppercase tracking-widest text-zinc-300 ml-1">— автозаполнение</span>
+                    </button>
+                  )}
+
+                  {/* Бейдж авторизованного пользователя */}
+                  {authUser && (
+                    <div className="flex items-center gap-3 px-6 py-4 rounded-3xl border border-zinc-100 bg-white">
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-black flex-shrink-0" style={{ backgroundColor: '#D14D72' }}>
+                        {authUser.name?.[0]?.toUpperCase() ?? '?'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-black uppercase tracking-widest text-zinc-400">Вы записываетесь как</div>
+                        <div className="font-black text-sm uppercase tracking-tight truncate">{authUser.name}</div>
+                      </div>
+                      <Link href="/login" className="text-[9px] font-black uppercase tracking-widest text-zinc-300 hover:text-zinc-500 transition-colors flex-shrink-0">
+                        Сменить
+                      </Link>
+                    </div>
+                  )}
+
                   <div className="relative group">
                     <User className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-300 transition-colors" size={20} />
                     <input

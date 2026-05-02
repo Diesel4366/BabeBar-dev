@@ -108,7 +108,9 @@ export async function GET(req: Request) {
   }
 
   const token = await createUserToken(profileId, process.env.ADMIN_SECRET!);
-  const res = NextResponse.redirect(new URL('/profile', origin));
+  const state = url.searchParams.get('state');
+  const redirectTo = state === 'booking' ? '/booking?restore=1' : '/profile';
+  const res = NextResponse.redirect(new URL(redirectTo, origin));
   res.cookies.set('user_session', token, {
     httpOnly: true,
     secure: true,
