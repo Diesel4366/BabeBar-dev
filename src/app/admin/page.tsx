@@ -9,7 +9,8 @@ import {
   ExternalLink,
   ChevronRight,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Scissors
 } from 'lucide-react';
 import { supabaseAdmin } from '@/lib/supabase';
 import { format, startOfMonth } from 'date-fns';
