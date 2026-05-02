@@ -67,6 +67,7 @@ export async function GET(req: Request) {
     const { data: created, error } = await supabaseAdmin
       .from('profiles')
       .insert({
+        id: crypto.randomUUID(),
         telegram_id: telegramId,
         name: tgData.first_name ?? null,
         telegram_username: tgData.username ?? null,
