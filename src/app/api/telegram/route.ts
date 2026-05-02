@@ -30,6 +30,61 @@ const MAIN_MENU = {
   ],
 };
 
+function normalizePhone(raw: string): string {
+  const digits = raw.replace(/\D/g, '');
+  if (digits.length === 11 && digits.startsWith('8')) return `+7${digits.slice(1)}`;
+  if (digits.length >= 11 && digits.startsWith('7')) return `+${digits}`;
+  if (digits.length === 10) return `+7${digits}`;
+  return `+${digits}`;
+}
+
+// Найти профиль по telegram_id. Если не нашли — попробовать найти по нормализованному телефону
+// и прилинковать telegram_id к нему (merge split profiles).
+async function linkOrMergeProfile(telegramId: number, phone: string, name: string | null, username: string | null) {
+  const tidStr = String(telegramId);
+  const normalPhone = normalizePhone(phone);
+
+  // 1. Ищем профиль по telegram_id
+  const { data: tgProfile } = await supabaseAdmin
+    .from('profiles').select('id').eq('telegram_id', tidStr).maybeSingle();
+
+  // 2. Ищем все профили с непустым телефоном (кроме уже найденного по tg)
+  const { data: allPhoneProfiles } = await supabaseAdmin
+    .from('profiles').select('id, phone').not('phone', 'is', null);
+
+  // Ищем совпадение по нормализованному телефону
+  const phoneMatch = allPhoneProfiles?.find(p =>
+    p.id !== tgProfile?.id && normalizePhone(p.phone as string) === normalPhone
+  );
+
+  if (phoneMatch) {
+    // Профиль с этим телефоном уже есть → прилинковываем telegram_id к нему
+    await supabaseAdmin.from('profiles').update({
+      telegram_id: tidStr,
+      telegram_username: username,
+      name: name ?? undefined,
+    }).eq('id', phoneMatch.id);
+
+    // Если у telegram-профиля нет записей — удаляем его как дубль
+    if (tgProfile && tgProfile.id !== phoneMatch.id) {
+      const { count } = await supabaseAdmin
+        .from('appointments').select('id', { count: 'exact', head: true }).eq('client_id', tgProfile.id);
+      if ((count ?? 0) === 0) {
+        await supabaseAdmin.from('profiles').delete().eq('id', tgProfile.id);
+      }
+    }
+    return phoneMatch.id;
+  }
+
+  // Телефонного дубля нет → просто обновляем телефон на текущем tg-профиле
+  if (tgProfile) {
+    await supabaseAdmin.from('profiles').update({ phone: normalPhone }).eq('id', tgProfile.id);
+    return tgProfile.id;
+  }
+
+  return null;
+}
+
 function toMins(t: string) {
   const [h, m] = t.substring(0, 5).split(':').map(Number);
   return h * 60 + m;
@@ -204,20 +259,16 @@ export async function POST(req: Request) {
       }
 
       if (message.contact && telegramId) {
-        const rawPhone = message.contact.phone_number ?? '';
-        const phone = rawPhone.startsWith('+') ? rawPhone : `+${rawPhone}`;
-        await supabaseAdmin.from('profiles').update({ phone }).eq('telegram_id', String(telegramId));
-        await sendMsg(chatId, '✅ Телефон сохранён! Теперь при записи через сайт данные заполнятся автоматически.', { remove_keyboard: true });
+        const phone = message.contact.phone_number ?? '';
+        await linkOrMergeProfile(telegramId, phone, message.from?.first_name ?? null, message.from?.username ?? null);
+        await sendMsg(chatId, '✅ Телефон сохранён! Записи с сайта теперь привязаны к вашему аккаунту.', { remove_keyboard: true });
       }
 
       if (text && telegramId && !text.startsWith('/')) {
         const digits = text.replace(/\D/g, '');
         if (digits.length >= 10 && digits.length <= 12) {
-          const phone = digits.length === 11 && digits.startsWith('8')
-            ? `+7${digits.slice(1)}`
-            : digits.startsWith('7') ? `+${digits}` : `+7${digits}`;
-          await supabaseAdmin.from('profiles').update({ phone }).eq('telegram_id', String(telegramId));
-          await sendMsg(chatId, '✅ Телефон сохранён! Теперь при записи через сайт данные заполнятся автоматически.', { remove_keyboard: true });
+          await linkOrMergeProfile(telegramId, text, message.from?.first_name ?? null, message.from?.username ?? null);
+          await sendMsg(chatId, '✅ Телефон сохранён! Записи с сайта теперь привязаны к вашему аккаунту.', { remove_keyboard: true });
         }
       }
     }
