@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { supabaseAdmin } from '@/lib/supabase';
+import { verifyUserToken } from '@/lib/userAuth';
 import { Service } from '@/types';
 
 export async function POST(req: Request) {
@@ -41,30 +43,39 @@ export async function POST(req: Request) {
       }
     }
 
-    // 1. Находим или создаем профиль
-    // Так как у нас нет Auth в этом шаге, мы просто ищем по телефону
-    let { data: profile } = await supabaseAdmin
-      .from('profiles')
-      .select('id')
-      .eq('phone', phone)
-      .single();
+    // 1. Находим профиль: сначала через сессию, потом по телефону
+    let profileId: string | null = null;
 
-    if (!profile) {
-      const { data: newProfile, error: profileError } = await supabaseAdmin
-        .from('profiles')
-        .insert([{ 
-          id: crypto.randomUUID(),
-          name, 
-          phone 
-        }])
-        .select()
-        .single();
-
-      if (profileError || !newProfile) throw profileError || new Error('Failed to create profile');
-      profile = newProfile;
+    const store = await cookies();
+    const sessionToken = store.get('user_session')?.value;
+    if (sessionToken) {
+      const sessionProfileId = await verifyUserToken(sessionToken, process.env.ADMIN_SECRET!);
+      if (sessionProfileId) {
+        profileId = sessionProfileId;
+        await supabaseAdmin.from('profiles').update({ name, phone }).eq('id', profileId);
+      }
     }
 
-    if (!profile) throw new Error('Profile not found');
+    if (!profileId) {
+      let { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('id')
+        .eq('phone', phone)
+        .maybeSingle();
+
+      if (!profile) {
+        const { data: newProfile, error: profileError } = await supabaseAdmin
+          .from('profiles')
+          .insert([{ id: crypto.randomUUID(), name, phone }])
+          .select()
+          .single();
+        if (profileError || !newProfile) throw profileError || new Error('Failed to create profile');
+        profile = newProfile;
+      }
+      profileId = profile!.id;
+    }
+
+    if (!profileId) throw new Error('Profile not found');
 
     // 2. Создаем запись
     const startTime = time;
@@ -77,7 +88,7 @@ export async function POST(req: Request) {
     const { data: appointment, error: appError } = await supabaseAdmin
       .from('appointments')
       .insert([{
-        client_id: profile.id,
+        client_id: profileId,
         date: date.split('T')[0], // YYYY-MM-DD
         start_time: startTime,
         end_time: endTime,
