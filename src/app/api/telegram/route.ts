@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { format, startOfToday, addDays } from 'date-fns';
 import { ru } from 'date-fns/locale';
+import { checkInventoryAlerts } from '@/lib/inventory-alerts';
 
 const TOKEN = process.env.TELEGRAM_TOKEN;
 
@@ -511,6 +512,9 @@ export async function POST(req: Request) {
         }
 
         await supabaseAdmin.from('appointment_services').insert([{ appointment_id: appointment.id, service_id: serviceId }]);
+
+        // Проверка склада и уведомление о дефиците
+        await checkInventoryAlerts(appointment.id);
 
         const dateDisplay = format(new Date(dateStr + 'T12:00:00'), 'eeee, d MMMM', { locale: ru });
         await editMsg(chatId, messageId,

@@ -112,6 +112,10 @@ export async function POST(req: Request) {
 
     if (servicesError) throw servicesError;
 
+    // 3.5 Проверка склада и уведомление о дефиците
+    const { checkInventoryAlerts } = await import('@/lib/inventory-alerts');
+    await checkInventoryAlerts(appointment.id);
+
     // 4. Отправляем уведомления в Telegram
     const telegramToken = process.env.TELEGRAM_TOKEN;
     const rawChatIds = process.env.TELEGRAM_ADMIN_CHAT_IDS ?? '';

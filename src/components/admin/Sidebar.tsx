@@ -13,7 +13,8 @@ import {
   ExternalLink,
   Menu,
   X,
-  Send
+  Send,
+  Package
 } from 'lucide-react';
 import LogoutButton from './LogoutButton';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -23,6 +24,7 @@ const MENU_ITEMS = [
   { name: 'Записи', icon: Calendar, href: '/admin/appointments' },
   { name: 'Услуги', icon: Scissors, href: '/admin/services' },
   { name: 'Клиенты', icon: Users, href: '/admin/clients' },
+  { name: 'Склад', icon: Package, href: '/admin/inventory' },
   { name: 'Рассылка', icon: Send, href: '/admin/broadcast' },
   { name: 'Настройки', icon: Settings, href: '/admin/settings' },
 ];
