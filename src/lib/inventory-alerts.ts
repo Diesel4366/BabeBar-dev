@@ -1,15 +1,12 @@
 import { supabaseAdmin } from './supabase';
 
-const TOKEN = process.env.TELEGRAM_TOKEN;
-
-export async function checkInventoryAlerts(appointmentId: string) {
+/**
+ * Проверяет остатки материалов для записи и возвращает текст предупреждения,
+ * если обнаружен дефицит или низкий порог.
+ */
+export async function getInventoryWarning(appointmentId: string): Promise<string> {
   try {
-    const chatIds = (process.env.TELEGRAM_ADMIN_CHAT_IDS ?? '')
-      .split(',').map(s => s.trim()).filter(Boolean);
-
-    if (!chatIds.length || !TOKEN) return;
-
-    // 1. Get all materials involved in this appointment
+    // 1. Получаем все материалы для этой записи
     const { data: materials, error } = await supabaseAdmin
       .from('appointment_services')
       .select(`
@@ -21,9 +18,8 @@ export async function checkInventoryAlerts(appointmentId: string) {
       `)
       .eq('appointment_id', appointmentId);
 
-    if (error || !materials) return;
+    if (error || !materials) return '';
 
-    // 2. Flatten and unique materials
     const uniqueMats = new Map();
     materials.forEach((s: any) => {
       if (s.service_materials) {
@@ -36,9 +32,10 @@ export async function checkInventoryAlerts(appointmentId: string) {
       }
     });
 
-    // 3. For each material, check if we need an alert
+    let warnings: string[] = [];
+
     for (const item of uniqueMats.values()) {
-      // Re-fetch to be 100% sure we have latest data after DB trigger
+      // Запрашиваем свежие данные после триггеров
       const { data: freshItem } = await supabaseAdmin
         .from('inventory_items')
         .select('*')
@@ -49,28 +46,20 @@ export async function checkInventoryAlerts(appointmentId: string) {
 
       const available = freshItem.actual_stock - freshItem.reserved_stock;
       
-      let message = '';
       if (available < 0) {
-        message = `🚨 *ДЕФИЦИТ МАТЕРИАЛА!* \n\nНа новую запись не хватает: *${freshItem.name}*.\n\n📊 В наличии: ${freshItem.actual_stock} ${freshItem.unit}\n📅 В резерве (будущие записи): ${freshItem.reserved_stock} ${freshItem.unit}\n⚠️ Недостача: *${Math.abs(available)} ${freshItem.unit}*`;
+        warnings.push(`🚨 *ДЕФИЦИТ:* ${freshItem.name} (не хватает ${Math.abs(available)} ${freshItem.unit})`);
       } else if (available <= freshItem.min_threshold) {
-        message = `⚠️ *СКЛАД: ЗАПАСЫ НА ИСХОДЕ* \n\nМатериал: *${freshItem.name}*\n\n📊 Доступно после записи: ${available} ${freshItem.unit}\n📉 Порог уведомления: ${freshItem.min_threshold} ${freshItem.unit}\n\nРекомендуем пополнить запасы.`;
-      }
-
-      if (message) {
-        await Promise.allSettled(chatIds.map(chatId =>
-          fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              chat_id: chatId,
-              text: message,
-              parse_mode: 'Markdown'
-            })
-          })
-        ));
+        warnings.push(`⚠️ *МАЛО:* ${freshItem.name} (остаток ${available} ${freshItem.unit})`);
       }
     }
+
+    if (warnings.length > 0) {
+      return `\n\n📦 *СКЛАД:*\n${warnings.join('\n')}`;
+    }
+    
+    return '';
   } catch (e) {
     console.error('Inventory alert error:', e);
+    return '';
   }
 }

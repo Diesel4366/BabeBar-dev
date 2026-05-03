@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { format, startOfToday, addDays } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { checkInventoryAlerts } from '@/lib/inventory-alerts';
+import { getInventoryWarning } from '@/lib/inventory-alerts';
 
 const TOKEN = process.env.TELEGRAM_TOKEN;
 
@@ -513,8 +513,8 @@ export async function POST(req: Request) {
 
         await supabaseAdmin.from('appointment_services').insert([{ appointment_id: appointment.id, service_id: serviceId }]);
 
-        // Проверка склада и уведомление о дефиците
-        await checkInventoryAlerts(appointment.id);
+        // Проверка склада и получение предупреждения
+        const inventoryWarning = await getInventoryWarning(appointment.id);
 
         const dateDisplay = format(new Date(dateStr + 'T12:00:00'), 'eeee, d MMMM', { locale: ru });
         await editMsg(chatId, messageId,
@@ -529,7 +529,12 @@ export async function POST(req: Request) {
           adminMsg += `\n✈️ *Telegram:* @${profile.telegram_username}`;
         }
         
-        adminMsg += `\n📅 *Дата:* ${dateDisplay}\n⏰ *Время:* ${time} — ${endTime}\n💅 *Услуга:* ${service.name}\n💰 *Сумма:* ${service.price} ₽`;
+        adminMsg += `\n📅 *Дата:* ${dateDisplay}\n⏰ *Время:* ${time} — ${endTime}\n💅 *Услуги:* ${service.name}\n💰 *Сумма:* ${service.price} ₽`;
+
+        // Добавляем инфо по складу
+        if (inventoryWarning) {
+          adminMsg += inventoryWarning;
+        }
 
         await notifyAdmins(adminMsg);
       }

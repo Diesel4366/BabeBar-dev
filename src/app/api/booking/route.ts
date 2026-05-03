@@ -112,9 +112,9 @@ export async function POST(req: Request) {
 
     if (servicesError) throw servicesError;
 
-    // 3.5 Проверка склада и уведомление о дефиците
-    const { checkInventoryAlerts } = await import('@/lib/inventory-alerts');
-    await checkInventoryAlerts(appointment.id);
+    // 3.5 Получение предупреждений по складу
+    const { getInventoryWarning } = await import('@/lib/inventory-alerts');
+    const inventoryWarning = await getInventoryWarning(appointment.id);
 
     // 4. Отправляем уведомления в Telegram
     const telegramToken = process.env.TELEGRAM_TOKEN;
@@ -122,8 +122,8 @@ export async function POST(req: Request) {
     const chatIds = rawChatIds.split(',').map(s => s.trim()).filter(Boolean);
 
     if (telegramToken && chatIds.length > 0) {
-      // Получаем username клиента
-      const { data: profile } = await supabaseAdmin
+      // Получаем данные профиля (включая username)
+      const { data: profileData } = await supabaseAdmin
         .from('profiles')
         .select('telegram_username')
         .eq('id', profileId)
@@ -135,11 +135,16 @@ export async function POST(req: Request) {
       
       let message = `🌟 *Новая запись!*\n\n👤 *Клиент:* ${name}\n📞 *Телефон:* ${phone}`;
       
-      if (profile?.telegram_username) {
-        message += `\n✈️ *Telegram:* @${profile.telegram_username}`;
+      if (profileData?.telegram_username) {
+        message += `\n✈️ *Telegram:* @${profileData.telegram_username}`;
       }
       
       message += `\n📅 *Дата:* ${dateFormatted}\n⏰ *Время:* ${time} — ${endTime}\n💅 *Услуги:* ${services.map((s: Service) => s.name).join(', ')}\n💰 *Сумма:* ${totalPrice} ₽`;
+      
+      // Добавляем предупреждение по складу, если оно есть
+      if (inventoryWarning) {
+        message += inventoryWarning;
+      }
 
       await Promise.allSettled(chatIds.map(chatId =>
         fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
