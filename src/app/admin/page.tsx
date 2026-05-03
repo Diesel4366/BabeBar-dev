@@ -1,20 +1,17 @@
 import React from 'react';
 import Link from 'next/link';
-import { 
-  Calendar, 
-  Users, 
-  TrendingUp, 
-  Clock, 
-  Plus, 
+import {
+  Calendar,
+  Users,
+  TrendingUp,
+  Clock,
+  Plus,
   ExternalLink,
   ChevronRight,
-  CheckCircle2,
-  XCircle,
   Scissors
 } from 'lucide-react';
 import { supabaseAdmin } from '@/lib/supabase';
-import { format, startOfMonth } from 'date-fns';
-import { ru } from 'date-fns/locale';
+import DashboardAppointmentCard from '@/components/admin/DashboardAppointmentCard';
 
 async function getDashboardData() {
   try {
@@ -79,14 +76,6 @@ export const dynamic = 'force-dynamic';
 
 export default async function AdminDashboard() {
   const data = await getDashboardData();
-
-  const getStatusInfo = (status: string) => {
-    const s = status.toLowerCase();
-    if (s === 'active') return { label: 'Ожидается', color: 'text-blue-500', bg: 'bg-blue-500' };
-    if (s === 'completed') return { label: 'Завершено', color: 'text-green-500', bg: 'bg-green-500' };
-    if (s.includes('cancelled')) return { label: 'Отменено', color: 'text-red-500', bg: 'bg-red-500' };
-    return { label: status, color: 'text-zinc-400', bg: 'bg-zinc-400' };
-  };
 
   return (
     <div className="space-y-8 lg:space-y-12 max-w-full overflow-x-hidden">
@@ -179,46 +168,20 @@ export default async function AdminDashboard() {
           <div className="space-y-4">
             {data.upcoming.length > 0 ? (
               data.upcoming.map((appt) => {
-                const profile = appt.profiles as unknown as { name: string; telegram_username?: string } | null;
                 const services = (appt.appointment_services as any[])?.map((s: any) => s.services?.name).filter(Boolean).join(', ');
-                const sInfo = getStatusInfo(appt.status);
-
                 return (
-                  <div key={appt.id} className="bg-white p-5 md:p-6 rounded-[1.8rem] md:rounded-[2rem] border border-zinc-100 flex flex-col sm:flex-row items-start sm:items-center justify-between hover:shadow-md transition-all group/item gap-4">
-                    <div className="flex items-center gap-4 md:gap-6">
-                      <div className="text-center min-w-[50px] md:min-w-[60px]">
-                        <div className="text-base md:text-lg font-black leading-none">{appt.start_time.substring(0, 5)}</div>
-                        <div className="text-[8px] md:text-[10px] text-zinc-400 font-bold uppercase">{appt.end_time.substring(0, 5)}</div>
-                      </div>
-                      <div className="h-8 md:h-10 w-[1px] bg-zinc-100" />
-                      <div className="min-w-0">
-                        <div className="font-black text-xs md:text-sm uppercase tracking-tight text-[#0A0A0A] truncate max-w-[150px] md:max-w-none">{profile?.name || 'Клиент'}</div>
-                        <div className="text-[9px] md:text-[10px] text-zinc-400 font-medium italic truncate max-w-[150px] md:max-w-none">{services || 'Услуга'}</div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between w-full sm:w-auto gap-4">
-                      <div className="text-left sm:text-right md:block">
-                        <div className="font-black text-sm">{appt.total_price} ₽</div>
-                        <div className={`text-[8px] font-black uppercase tracking-widest ${sInfo.color} flex items-center gap-1 sm:justify-end`}>
-                          <div className={`w-1 h-1 rounded-full ${sInfo.bg}`} />
-                          {sInfo.label}
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        {appt.status === 'active' && (
-                          <>
-                            <button className="p-2.5 md:p-3 rounded-xl bg-zinc-50 text-zinc-400 hover:text-red-500 transition-colors">
-                              <XCircle size={18} />
-                            </button>
-                            <button className="p-2.5 md:p-3 rounded-xl bg-zinc-50 text-zinc-400 hover:text-green-500 transition-colors">
-                              <CheckCircle2 size={18} />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                  <DashboardAppointmentCard
+                    key={appt.id}
+                    appt={{
+                      id: appt.id,
+                      start_time: appt.start_time,
+                      end_time: appt.end_time,
+                      status: appt.status,
+                      total_price: appt.total_price,
+                      profiles: appt.profiles as { name: string; telegram_username?: string } | null,
+                      services,
+                    }}
+                  />
                 );
               })
             ) : (
