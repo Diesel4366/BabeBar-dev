@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Service } from '@/types';
 import { CATEGORY_ORDER } from '@/lib/config';
-import { Plus, Trash2, Edit2, Clock, X, Check, Package, Leaf, TrendingUp } from 'lucide-react';
+import { Plus, Trash2, Edit2, Clock, X, Check, Package, Leaf, TrendingUp, ImagePlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 type ServiceForm = Omit<Service, 'id' | 'created_at'>;
@@ -53,6 +53,7 @@ export default function AdminServices() {
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [costs, setCosts] = useState<Map<string, ServiceCost>>(new Map());
+  const [imageUploading, setImageUploading] = useState(false);
 
   // Materials state
   const [serviceMaterials, setServiceMaterials] = useState<ServiceMaterial[]>([]);
@@ -137,6 +138,19 @@ export default function AdminServices() {
       const res = await fetch(`/api/admin/services/materials?id=${id}`, { method: 'DELETE' });
       if (res.ok && modal?.service) fetchServiceMaterials(modal.service.id);
     } catch (e) { console.error(e); }
+  };
+
+  const handleImageUpload = async (file: File) => {
+    setImageUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('image', file);
+      if (modal?.service?.id) fd.append('serviceId', modal.service.id);
+      const res = await fetch('/api/admin/services/image', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.url) setForm(f => ({ ...f, image_url: data.url }));
+    } catch { /* silent */ }
+    setImageUploading(false);
   };
 
   const handleSave = async () => {
@@ -368,6 +382,47 @@ export default function AdminServices() {
                     className="w-full bg-[#FAFAFA] border border-zinc-100 rounded-2xl px-6 py-5 font-bold text-sm focus:border-[#D14D72] outline-none resize-none transition-all"
                     placeholder="Расскажите об услуге..."
                   />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block mb-3">Фото услуги</label>
+                  <label className="relative block cursor-pointer group">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={e => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); }}
+                    />
+                    {form.image_url ? (
+                      <div className="relative w-full h-40 rounded-2xl overflow-hidden border border-zinc-100">
+                        <Image src={form.image_url} alt="preview" fill className="object-cover" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <ImagePlus size={20} className="text-white" />
+                          <span className="text-white text-xs font-black uppercase tracking-widest">Изменить</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="w-full h-40 rounded-2xl border-2 border-dashed border-zinc-200 flex flex-col items-center justify-center gap-2 hover:border-[#D14D72] hover:bg-[#fce7ed]/30 transition-all">
+                        {imageUploading ? (
+                          <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-[#D14D72]" />
+                        ) : (
+                          <>
+                            <ImagePlus size={24} className="text-zinc-300" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Загрузить фото</span>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </label>
+                  {form.image_url && (
+                    <button
+                      type="button"
+                      onClick={() => setForm(f => ({ ...f, image_url: null }))}
+                      className="mt-2 text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-red-500 transition-colors"
+                    >
+                      Удалить фото
+                    </button>
+                  )}
                 </div>
 
                 <div className="space-y-6 bg-zinc-50/50 p-8 rounded-[2rem] border border-zinc-100">
