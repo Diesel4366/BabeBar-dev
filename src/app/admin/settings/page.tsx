@@ -24,6 +24,13 @@ function toMonthKey(year: number, month: number) {
   return `${year}-${String(month + 1).padStart(2, '0')}`;
 }
 
+function toLocalKey(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 function buildCalendar(year: number, month: number): (Date | null)[] {
   const first = new Date(year, month, 1);
   // Monday-first: getDay() returns 0=Sun..6=Sat → convert to Mon=0
@@ -81,7 +88,7 @@ export default function AdminSettings() {
   };
 
   const openDay = (date: Date) => {
-    const key = date.toISOString().split('T')[0];
+    const key = toLocalKey(date);
     const exception = exceptions[key] ?? null;
     setForm({
       is_working: exception ? exception.is_working : false,
@@ -122,11 +129,11 @@ export default function AdminSettings() {
     setSaving(false);
   };
 
-  const todayKey = now.toISOString().split('T')[0];
+  const todayKey = toLocalKey(now);
   const cells = buildCalendar(year, month);
 
   const getDayState = (date: Date): 'working' | 'dayoff' | 'default' => {
-    const key = date.toISOString().split('T')[0];
+    const key = toLocalKey(date);
     const ex = exceptions[key];
     if (!ex) return 'default';
     return ex.is_working ? 'working' : 'dayoff';
@@ -261,7 +268,7 @@ export default function AdminSettings() {
               {cells.map((date, i) => {
                 if (!date) return <div key={i} />;
 
-                const key = date.toISOString().split('T')[0];
+                const key = toLocalKey(date);
                 const state = getDayState(date);
                 const isToday = key === todayKey;
                 const isPast = date < new Date(now.getFullYear(), now.getMonth(), now.getDate());

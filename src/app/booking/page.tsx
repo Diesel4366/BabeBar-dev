@@ -9,6 +9,13 @@ import { Service } from '@/types';
 import { CATEGORY_ORDER } from '@/lib/config';
 import BookingSuccessModal from '@/components/BookingSuccessModal';
 
+function toLocalKey(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 function BookingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -66,10 +73,10 @@ function BookingContent() {
     async function loadData() {
       try {
         const today = new Date();
-        const from = today.toISOString().split('T')[0];
+        const from = toLocalKey(today);
         const toDate = new Date(today);
         toDate.setDate(today.getDate() + 59);
-        const to = toDate.toISOString().split('T')[0];
+        const to = toLocalKey(toDate);
 
         const [servicesRes, scheduleRes] = await Promise.all([
           fetch('/api/services'),
@@ -109,7 +116,7 @@ function BookingContent() {
     if (selectedDate) {
       async function checkAvailability() {
         try {
-          const formattedDate = selectedDate!.toISOString().split('T')[0];
+          const formattedDate = toLocalKey(selectedDate!);
           const res = await fetch(`/api/availability?date=${formattedDate}`, { cache: 'no-store' });
           const data = await res.json();
           if (data.occupiedIntervals) setOccupiedIntervals(data.occupiedIntervals);
@@ -412,7 +419,7 @@ function BookingContent() {
                   {[...Array(60)].map((_, i) => {
                     const date = new Date();
                     date.setDate(date.getDate() + i);
-                    const dateKey = date.toISOString().split('T')[0];
+                    const dateKey = toLocalKey(date);
                     const isWorking = workingDates.has(dateKey);
                     const isSelected = selectedDate?.toDateString() === date.toDateString();
                     return (
