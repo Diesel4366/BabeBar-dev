@@ -72,6 +72,27 @@ export async function initPayment(opts: {
   return { paymentId: String(data.PaymentId), paymentUrl: data.PaymentURL };
 }
 
+export async function getPaymentState(paymentId: string): Promise<string | null> {
+  const body: Record<string, unknown> = {
+    TerminalKey: process.env.TINKOFF_TERMINAL_KEY,
+    PaymentId: paymentId,
+  };
+  body['Token'] = generateToken(body);
+
+  const res = await fetch(`${BASE_URL}/GetState`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  const data = await res.json();
+  if (!data.Success) {
+    console.error('Tinkoff GetState failed:', data);
+    return null;
+  }
+  return data.Status as string;
+}
+
 export async function cancelPayment(paymentId: string, amount: number, receipt?: TinkoffReceipt): Promise<boolean> {
   const body: Record<string, unknown> = {
     TerminalKey: process.env.TINKOFF_TERMINAL_KEY,

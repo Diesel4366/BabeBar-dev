@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Calendar, Clock, User, Phone,
-  CheckCircle2, XCircle, Search, Filter, X, Send, Plus, RotateCcw,
+  CheckCircle2, XCircle, Search, Filter, X, Send, Plus, RotateCcw, RefreshCw,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AdminNewAppointmentModal from '@/components/admin/AdminNewAppointmentModal';
@@ -66,6 +66,7 @@ export default function AdminAppointments() {
   const [page, setPage] = useState(1);
   const [showNewModal, setShowNewModal] = useState(false);
   const [refunding, setRefunding] = useState<string | null>(null);
+  const [checking, setChecking] = useState<string | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(searchTerm), 300);
@@ -110,6 +111,28 @@ export default function AdminAppointments() {
     } catch (err) {
       console.error('Failed to update status:', err);
     }
+  };
+
+  const checkPayment = async (appId: string) => {
+    setChecking(appId);
+    try {
+      const res = await fetch('/api/payment/tinkoff/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ appointmentId: appId }),
+      });
+      const data = await res.json();
+      if (data.result === 'paid') {
+        setAppointments(prev => prev.map(a => a.id === appId ? { ...a, status: 'active', paymentStatus: 'paid' } : a));
+      } else if (data.result === 'failed') {
+        setAppointments(prev => prev.map(a => a.id === appId ? { ...a, status: 'cancelled_by_client', paymentStatus: 'failed' } : a));
+      } else {
+        alert('Оплата ещё не подтверждена Tinkoff');
+      }
+    } catch {
+      alert('Ошибка соединения');
+    }
+    setChecking(null);
   };
 
   const refund = async (app: AppointmentItem) => {
@@ -333,6 +356,19 @@ export default function AdminAppointments() {
                   </div>
 
                   <div className="flex flex-col gap-2 border-t lg:border-t-0 lg:border-l border-zinc-50 pt-6 lg:pt-0 lg:pl-10">
+                    {app.status === 'pending_payment' && (
+                      <button
+                        onClick={() => checkPayment(app.id)}
+                        disabled={checking === app.id}
+                        className="bg-yellow-50 hover:bg-yellow-100 text-yellow-600 px-5 py-3 rounded-xl md:rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                      >
+                        {checking === app.id
+                          ? <div className="w-4 h-4 border-2 border-yellow-300 border-t-yellow-600 rounded-full animate-spin" />
+                          : <RefreshCw size={14} />
+                        }
+                        <span>Проверить оплату</span>
+                      </button>
+                    )}
                     {app.status === 'active' && (
                       <div className="flex gap-2">
                         <button
