@@ -1,6 +1,16 @@
+import type { Metadata } from 'next';
 import { supabaseAdmin } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    title: 'BABEBAR — Студия красоты в Нижнем Новгороде',
+    description: 'Запишитесь онлайн на наращивание ресниц, оформление бровей или макияж. Нижний Новгород, ул. Сазанова 2А. Работаем ежедневно.',
+    alternates: { canonical: 'https://babebar.ru' },
+  };
+}
+
 import { Hero } from '@/components/client/Hero';
 import { ServicesGrid } from '@/components/client/ServicesGrid';
 import { Header } from '@/components/shared/Header';
@@ -125,6 +135,27 @@ export default async function Home() {
           </div>
         </div>
       </section>
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'BeautySalon',
+          name: 'BABEBAR',
+          description: 'Студия красоты. Наращивание ресниц, оформление бровей, макияж.',
+          url: 'https://babebar.ru',
+          telephone: settings.phone,
+          address: {
+            '@type': 'PostalAddress',
+            streetAddress: 'ул. Сазанова 2А',
+            addressLocality: 'Нижний Новгород',
+            addressCountry: 'RU',
+          },
+          sameAs: [settings.instagram_url],
+          priceRange: '₽₽',
+          openingHours: 'Mo-Su 10:00-21:00',
+        })}}
+      />
 
       <footer className="py-12 border-t border-zinc-100 bg-white">
         <div className="container-custom flex flex-col md:flex-row justify-between items-center gap-10">

@@ -1,24 +1,44 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 
-export async function GET() {
-  try {
-    const { data, error } = await supabaseAdmin
-      .from('appointments')
-      .select(`
-        *,
-        client:profiles(name, phone, telegram_username),
-        services:appointment_services(
-          service:services(id, name, price, duration_minutes)
-        )
-      `)
-      .order('date', { ascending: false })
-      .order('start_time', { ascending: false });
+const PAGE_SIZE = 20;
 
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const page = Math.max(1, parseInt(searchParams.get('page') ?? '1'));
+    const status = searchParams.get('status') ?? 'all';
+    const dateFilter = searchParams.get('dateFilter') ?? 'all';
+    const search = searchParams.get('search')?.trim() ?? '';
+
+    const today = new Date().toISOString().split('T')[0];
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const from = (page - 1) * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+
+    let query = supabaseAdmin
+      .from('appointments')
+      .select(
+        `*,
+        client:profiles${search ? '!inner' : ''}(name, phone, telegram_username),
+        services:appointment_services(service:services(id, name, price, duration_minutes))`,
+        { count: 'exact' }
+      )
+      .order('date', { ascending: false })
+      .order('start_time', { ascending: false })
+      .range(from, to);
+
+    if (status !== 'all') query = query.eq('status', status);
+    if (dateFilter === 'today') query = query.eq('date', today);
+    if (dateFilter === 'week') query = query.gte('date', weekAgo);
+    if (search) {
+      query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%`, { foreignTable: 'profiles' });
+    }
+
+    const { data, error, count } = await query;
     if (error) throw error;
 
-    // Форматируем данные для удобства фронтенда
-    const formattedData = data.map((app: any) => ({
+    const formattedData = (data ?? []).map((app: any) => ({
       id: app.id,
       date: app.date,
       startTime: app.start_time,
@@ -26,10 +46,10 @@ export async function GET() {
       status: app.status,
       totalPrice: app.total_price,
       client: app.client,
-      services: app.services.map((s: any) => s.service)
+      services: app.services.map((s: any) => s.service),
     }));
 
-    return NextResponse.json(formattedData);
+    return NextResponse.json({ data: formattedData, total: count ?? 0 });
   } catch (error: any) {
     console.error('Admin appointments error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

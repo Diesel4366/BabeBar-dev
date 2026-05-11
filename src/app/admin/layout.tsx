@@ -1,5 +1,10 @@
+import type { Metadata } from 'next';
 import React from 'react';
 import Sidebar from '@/components/admin/Sidebar';
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default function AdminLayout({
   children,

@@ -37,29 +37,46 @@ const STATUS_COLORS: Record<AppointmentStatus, string> = {
 type DateFilter = 'all' | 'today' | 'week';
 type StatusFilter = 'all' | AppointmentStatus;
 
+const PAGE_SIZE = 20;
+
 export default function AdminAppointments() {
   const [appointments, setAppointments] = useState<AppointmentItem[]>([]);
+  const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
   const [page, setPage] = useState(1);
-  const PAGE_SIZE = 20;
 
-  const fetchAppointments = useCallback(async () => {
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchTerm), 300);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+  const fetchAppointments = useCallback(async (
+    p: number, status: StatusFilter, date: DateFilter, search: string
+  ) => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/admin/appointments');
-      const data = await res.json();
-      if (Array.isArray(data)) setAppointments(data);
+      const params = new URLSearchParams({ page: String(p), status, dateFilter: date });
+      if (search) params.set('search', search);
+      const res = await fetch(`/api/admin/appointments?${params}`);
+      const json = await res.json();
+      if (json.data) {
+        setAppointments(json.data);
+        setTotal(json.total);
+      }
     } catch (err) {
       console.error('Failed to fetch appointments:', err);
     }
     setIsLoading(false);
   }, []);
 
-  useEffect(() => { fetchAppointments(); }, [fetchAppointments]);
+  useEffect(() => {
+    fetchAppointments(page, statusFilter, dateFilter, debouncedSearch);
+  }, [page, statusFilter, dateFilter, debouncedSearch, fetchAppointments]);
 
   const updateStatus = async (id: string, status: string) => {
     try {
@@ -78,20 +95,8 @@ export default function AdminAppointments() {
     }
   };
 
-  const today = new Date().toISOString().split('T')[0];
-  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-  const filtered = appointments.filter(app => {
-    if (searchTerm && !app.client?.name?.toLowerCase().includes(searchTerm.toLowerCase()) && !app.client?.phone?.includes(searchTerm)) return false;
-    if (statusFilter !== 'all' && app.status !== statusFilter) return false;
-    if (dateFilter === 'today' && app.date !== today) return false;
-    if (dateFilter === 'week' && app.date < weekAgo) return false;
-    return true;
-  });
-
   const activeFiltersCount = (statusFilter !== 'all' ? 1 : 0) + (dateFilter !== 'all' ? 1 : 0);
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = Math.ceil(total / PAGE_SIZE);
 
   const resetPage = () => setPage(1);
 
@@ -103,7 +108,7 @@ export default function AdminAppointments() {
             Управление <span className="text-primary italic">записями</span>
           </h1>
           <p className="text-zinc-400 font-medium uppercase text-[9px] md:text-[10px] tracking-[0.2em]">
-            {filtered.length} из {appointments.length} записей в базе
+            {total} записей в базе
           </p>
         </div>
       </div>
@@ -202,8 +207,8 @@ export default function AdminAppointments() {
       ) : (
         <>
         <div className="grid grid-cols-1 gap-4 md:gap-6">
-          {filtered.length > 0 ? (
-            paginated.map((app, i) => (
+          {appointments.length > 0 ? (
+            appointments.map((app, i) => (
               <motion.div
                 key={app.id}
                 initial={{ opacity: 0, y: 10 }}
@@ -296,7 +301,7 @@ export default function AdminAppointments() {
               </div>
               <h3 className="text-xl font-black uppercase tracking-tight text-zinc-400 mb-2">Записей нет</h3>
               <p className="text-zinc-300 font-medium text-xs italic px-10">
-                {activeFiltersCount > 0 || searchTerm ? 'Попробуйте сбросить фильтры' : 'Все визиты клиентов появятся здесь'}
+                {activeFiltersCount > 0 || debouncedSearch ? 'Попробуйте сбросить фильтры' : 'Все визиты клиентов появятся здесь'}
               </p>
             </div>
           )}
