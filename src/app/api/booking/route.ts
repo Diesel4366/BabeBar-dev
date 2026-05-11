@@ -166,7 +166,7 @@ export async function POST(req: Request) {
             Price: Math.round(paymentAmount * 100),
             Quantity: 1,
             Amount: Math.round(paymentAmount * 100),
-            PaymentMethod: 'advance' as const,
+            PaymentMethod: 'full_payment' as const,
             PaymentObject: 'service' as const,
             Tax: 'none' as const,
           }]
