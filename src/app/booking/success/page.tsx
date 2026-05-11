@@ -21,16 +21,41 @@ function SuccessContent() {
     let timer: ReturnType<typeof setTimeout>;
 
     async function check() {
+      // Сначала смотрим в БД
       const res = await fetch(`/api/payment/status?id=${appointmentId}`);
       const data = await res.json();
 
       if (data.status === 'active') {
         setState('confirmed');
-      } else if (data.status === 'pending_payment' && attempts < 10) {
-        setAttempts(a => a + 1);
-        timer = setTimeout(check, 2000);
-      } else {
-        setState(data.status === 'cancelled_by_client' ? 'failed' : 'confirmed');
+        return;
+      }
+
+      if (data.status === 'cancelled_by_client') {
+        setState('failed');
+        return;
+      }
+
+      if (data.status === 'pending_payment') {
+        // Принудительно проверяем у Tinkoff и обновляем БД
+        const checkRes = await fetch('/api/payment/tinkoff/check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ appointmentId }),
+        });
+        const checkData = await checkRes.json();
+
+        if (checkData.result === 'paid') {
+          setState('confirmed');
+        } else if (checkData.result === 'failed') {
+          setState('failed');
+        } else if (attempts < 8) {
+          // Ещё не подтверждено — ждём и повторяем
+          setAttempts(a => a + 1);
+          timer = setTimeout(check, 2500);
+        } else {
+          // Tinkoff сказал "ещё в обработке" но мы на странице успеха — считаем оплаченным
+          setState('confirmed');
+        }
       }
     }
 
