@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Clock, CheckCircle2, Phone, User, Star, ArrowRight, Plus, LogIn } from 'lucide-react';
+import { ChevronLeft, Clock, CheckCircle2, Phone, User, Star, ArrowRight, Plus, LogIn, Tag, X } from 'lucide-react';
 import Link from 'next/link';
 import { Service } from '@/types';
 import { CATEGORY_ORDER } from '@/lib/config';
@@ -36,6 +36,10 @@ function BookingContent() {
   const [success, setSuccess] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [workingDates, setWorkingDates] = useState<Set<string>>(new Set());
+  const [promoInput, setPromoInput] = useState('');
+  const [promoData, setPromoData] = useState<{ codeId: string; percent: number; discount: number } | null>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [promoLoading, setPromoLoading] = useState(false);
 
   // Derived service groups
   const mainServices = allServices.filter(s => !s.is_addon);
@@ -133,6 +137,30 @@ function BookingContent() {
   const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
   const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration_minutes, 0);
 
+  // Пересчитываем скидку при изменении набора услуг
+  useEffect(() => {
+    if (promoData) {
+      setPromoData(d => d ? { ...d, discount: Math.round(totalPrice * d.percent / 100) } : null);
+    }
+  }, [totalPrice]);
+
+  const finalPrice = totalPrice - (promoData?.discount ?? 0);
+
+  const applyPromo = async () => {
+    if (!promoInput.trim()) return;
+    setPromoLoading(true);
+    setPromoError(null);
+    setPromoData(null);
+    const res = await fetch(`/api/promo/validate?code=${encodeURIComponent(promoInput.trim())}`);
+    const data = await res.json();
+    if (data.valid) {
+      setPromoData({ codeId: data.codeId, percent: data.percent, discount: Math.round(totalPrice * data.percent / 100) });
+    } else {
+      setPromoError(data.error || 'Промокод недействителен');
+    }
+    setPromoLoading(false);
+  };
+
   const toggleService = (service: Service) => {
     setSelectedServices(prev => {
       const exists = prev.find(s => s.id === service.id);
@@ -197,7 +225,7 @@ function BookingContent() {
       const response = await fetch('/api/booking', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: formData.name, phone: formData.phone, date: selectedDate?.toISOString(), time: selectedTime, services: selectedServices, totalPrice }),
+        body: JSON.stringify({ name: formData.name, phone: formData.phone, date: selectedDate?.toISOString(), time: selectedTime, services: selectedServices, totalPrice: finalPrice, promoCodeId: promoData?.codeId, discountAmount: promoData?.discount ?? 0 }),
       });
       const data = await response.json();
       if (data.success) setSuccess(true);
@@ -563,10 +591,56 @@ function BookingContent() {
                   </div>
                 </div>
 
+                {/* Promo code */}
+                <div className="space-y-3">
+                  {promoData ? (
+                    <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-green-50 border border-green-100">
+                      <Tag size={16} className="text-green-500 flex-shrink-0" />
+                      <span className="flex-1 text-sm font-black uppercase tracking-widest text-green-600">
+                        {promoInput.toUpperCase()} — скидка {promoData.percent}% ({promoData.discount} ₽)
+                      </span>
+                      <button onClick={() => { setPromoData(null); setPromoInput(''); }} className="text-green-300 hover:text-green-600">
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Tag className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-300" size={16} />
+                        <input
+                          type="text"
+                          placeholder="Промокод"
+                          value={promoInput}
+                          onChange={e => { setPromoInput(e.target.value.toUpperCase()); setPromoError(null); }}
+                          onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), applyPromo())}
+                          className="w-full bg-white pl-12 pr-4 py-4 rounded-2xl border border-zinc-100 font-black text-sm uppercase tracking-widest outline-none focus:border-zinc-300"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={applyPromo}
+                        disabled={promoLoading || !promoInput.trim()}
+                        className="px-5 py-4 rounded-2xl font-black text-xs uppercase tracking-widest border border-zinc-100 text-zinc-500 hover:border-zinc-300 transition-all disabled:opacity-40"
+                      >
+                        {promoLoading ? '...' : 'Применить'}
+                      </button>
+                    </div>
+                  )}
+                  {promoError && <p className="text-red-500 text-xs font-bold px-1">{promoError}</p>}
+                </div>
+
                 <div className="bg-[#0A0A0A] text-white p-10 rounded-[3rem] shadow-2xl space-y-10">
                   <div className="flex justify-between items-end border-b border-white/10 pb-8">
                     <span className="text-zinc-500 text-[10px] font-black uppercase tracking-widest">Итог записи</span>
-                    <span className="text-3xl font-black leading-none">{totalPrice} ₽</span>
+                    <div className="text-right">
+                      {promoData && (
+                        <div className="text-zinc-500 text-sm line-through leading-none mb-1">{totalPrice} ₽</div>
+                      )}
+                      <span className="text-3xl font-black leading-none">{finalPrice} ₽</span>
+                      {promoData && (
+                        <div className="text-green-400 text-[10px] font-black uppercase tracking-widest mt-1">−{promoData.discount} ₽</div>
+                      )}
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-8">
                     <div>
@@ -608,7 +682,7 @@ function BookingContent() {
           <div className="max-w-4xl mx-auto flex justify-between items-center gap-6">
             <div className="flex flex-col">
               <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest leading-none mb-1">Сумма</span>
-              <span className="text-xl font-black">{totalPrice} ₽</span>
+              <span className="text-xl font-black">{finalPrice} ₽</span>
             </div>
             <button
               disabled={step === 1 ? selectedServices.length === 0 : !selectedDate || !selectedTime}

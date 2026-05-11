@@ -7,9 +7,10 @@ import { Service } from '@/types';
 
 export async function POST(req: Request) {
   try {
-    const { name, phone: rawPhone, date, time, services, totalPrice }: {
+    const { name, phone: rawPhone, date, time, services, totalPrice, promoCodeId, discountAmount = 0 }: {
       name: string; phone: string; date: string; time: string;
       services: Service[]; totalPrice: number;
+      promoCodeId?: string; discountAmount?: number;
     } = await req.json();
 
     const phone = rawPhone ? normalizePhone(rawPhone) : rawPhone;
@@ -88,14 +89,31 @@ export async function POST(req: Request) {
     endDate.setHours(hours, minutes + totalDuration);
     const endTime = `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`;
 
+    // Валидируем промокод повторно на сервере
+    let validatedPromoId: string | null = null;
+    if (promoCodeId) {
+      const { data: promo } = await supabaseAdmin
+        .from('promo_codes')
+        .select('id, is_active, max_uses, used_count, expires_at')
+        .eq('id', promoCodeId)
+        .maybeSingle();
+      const isValid = promo &&
+        promo.is_active &&
+        (!promo.expires_at || new Date(promo.expires_at) >= new Date()) &&
+        (promo.max_uses === null || promo.used_count < promo.max_uses);
+      if (isValid) validatedPromoId = promo.id;
+    }
+
     const { data: appointment, error: appError } = await supabaseAdmin
       .from('appointments')
       .insert([{
         client_id: profileId,
-        date: date.split('T')[0], // YYYY-MM-DD
+        date: date.split('T')[0],
         start_time: startTime,
         end_time: endTime,
         total_price: totalPrice,
+        discount_amount: validatedPromoId ? discountAmount : 0,
+        promo_code_id: validatedPromoId,
         status: 'active'
       }])
       .select()
@@ -114,6 +132,18 @@ export async function POST(req: Request) {
       .insert(appointmentServices);
 
     if (servicesError) throw servicesError;
+
+    // Инкрементируем счётчик промокода
+    if (validatedPromoId) {
+      const { data: pc } = await supabaseAdmin
+        .from('promo_codes').select('used_count').eq('id', validatedPromoId).single();
+      if (pc) {
+        await supabaseAdmin
+          .from('promo_codes')
+          .update({ used_count: pc.used_count + 1 })
+          .eq('id', validatedPromoId);
+      }
+    }
 
     // 3.5 Получение предупреждений по складу
     const { getInventoryWarning } = await import('@/lib/inventory-alerts');
@@ -148,6 +178,7 @@ export async function POST(req: Request) {
           adminMessage += `\n✈️ *Telegram:* @${profileData.telegram_username}`;
         }
         adminMessage += `\n📅 *Дата:* ${dateFormatted}\n⏰ *Время:* ${time} — ${endTime}\n💅 *Услуги:* ${serviceNames}\n💰 *Сумма:* ${totalPrice} ₽`;
+        if (validatedPromoId && discountAmount > 0) adminMessage += ` _(скидка ${discountAmount} ₽)_`;
         if (inventoryWarning) {
           adminMessage += inventoryWarning;
         }

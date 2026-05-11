@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Calendar, Clock, LogOut, Settings, X, Sparkles, Camera } from 'lucide-react';
+import { ChevronLeft, Calendar, Clock, LogOut, Settings, X, Sparkles, Camera, Cake, Pencil, Check } from 'lucide-react';
 
 interface AppointmentService {
   services: { name: string; price: number; duration_minutes: number } | null;
@@ -28,6 +28,7 @@ interface User {
   telegram_username: string | null;
   telegram_photo: string | null;
   created_at: string | null;
+  birthday: string | null;
   isAdmin: boolean;
 }
 
@@ -52,6 +53,9 @@ export default function ProfilePage() {
   const [photoError, setPhotoError] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [editBirthday, setEditBirthday] = useState(false);
+  const [birthdayInput, setBirthdayInput] = useState('');
+  const [birthdaySaving, setBirthdaySaving] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -93,6 +97,18 @@ export default function ProfilePage() {
   const completed = appointments.filter(a => a.status === 'completed');
   const allVisits = appointments.filter(a => !a.status.startsWith('cancelled'));
   const totalSpent = completed.reduce((sum, a) => sum + (a.total_price || 0), 0);
+
+  const handleSaveBirthday = async () => {
+    setBirthdaySaving(true);
+    await fetch('/api/user/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ birthday: birthdayInput || null }),
+    });
+    setUser(u => u ? { ...u, birthday: birthdayInput || null } : u);
+    setEditBirthday(false);
+    setBirthdaySaving(false);
+  };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -193,6 +209,47 @@ export default function ProfilePage() {
                 <Settings size={14} />
                 Админ
               </Link>
+            )}
+          </div>
+
+          {/* Birthday */}
+          <div className="flex items-center gap-3 pt-2 border-t border-zinc-50">
+            <Cake size={16} className="text-zinc-300 flex-shrink-0" />
+            {editBirthday ? (
+              <div className="flex items-center gap-2 flex-1">
+                <input
+                  type="date"
+                  value={birthdayInput}
+                  onChange={e => setBirthdayInput(e.target.value)}
+                  className="flex-1 bg-zinc-50 px-3 py-1.5 rounded-xl border border-zinc-100 text-sm font-medium outline-none focus:border-zinc-300"
+                />
+                <button
+                  onClick={handleSaveBirthday}
+                  disabled={birthdaySaving}
+                  className="w-8 h-8 rounded-xl flex items-center justify-center text-white transition-all"
+                  style={{ backgroundColor: '#D14D72' }}
+                >
+                  {birthdaySaving ? <div className="w-3 h-3 border border-white/40 border-t-white rounded-full animate-spin" /> : <Check size={14} />}
+                </button>
+                <button onClick={() => setEditBirthday(false)} className="w-8 h-8 rounded-xl flex items-center justify-center border border-zinc-100 text-zinc-400 hover:text-zinc-600">
+                  <X size={14} />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 flex-1">
+                <span className="text-sm font-medium text-zinc-500 flex-1">
+                  {user?.birthday
+                    ? new Date(user.birthday + 'T12:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+                    : <span className="text-zinc-300">Дата рождения не указана</span>
+                  }
+                </span>
+                <button
+                  onClick={() => { setBirthdayInput(user?.birthday ?? ''); setEditBirthday(true); }}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-zinc-300 hover:text-zinc-500 hover:bg-zinc-50 transition-all"
+                >
+                  <Pencil size={13} />
+                </button>
+              </div>
             )}
           </div>
 

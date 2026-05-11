@@ -1,6 +1,6 @@
 import React from 'react';
 import { supabaseAdmin } from '@/lib/supabase';
-import { Users, Phone, Calendar, TrendingUp, MessageSquare, Send } from 'lucide-react';
+import { Users, Phone, Calendar, Send, Cake } from 'lucide-react';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
@@ -15,6 +15,7 @@ async function getClientsData() {
         phone,
         telegram_username,
         created_at,
+        birthday,
         appointments (
           id,
           total_price,
@@ -93,6 +94,12 @@ export default async function AdminClients() {
                       <Calendar size={14} className="text-primary" />
                       <span>Регистрация: {format(new Date(client.created_at), 'd MMMM yyyy', { locale: ru })}</span>
                     </div>
+                    {(client as any).birthday && (
+                      <div className="flex items-center gap-2">
+                        <Cake size={14} className="text-primary" />
+                        <span>ДР: {format(new Date((client as any).birthday + 'T12:00:00'), 'd MMMM', { locale: ru })}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

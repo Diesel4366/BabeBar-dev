@@ -3,18 +3,19 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { 
-  LayoutDashboard, 
-  Calendar, 
-  Users, 
-  Scissors, 
-  Settings, 
+import {
+  LayoutDashboard,
+  Calendar,
+  Users,
+  Scissors,
+  Settings,
   LogOut,
   ExternalLink,
   Menu,
   X,
   Send,
-  Package
+  Package,
+  Tag
 } from 'lucide-react';
 import LogoutButton from './LogoutButton';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -26,6 +27,7 @@ const MENU_ITEMS = [
   { name: 'Клиенты', icon: Users, href: '/admin/clients' },
   { name: 'Склад', icon: Package, href: '/admin/inventory' },
   { name: 'Рассылка', icon: Send, href: '/admin/broadcast' },
+  { name: 'Промокоды', icon: Tag, href: '/admin/promo' },
   { name: 'Настройки', icon: Settings, href: '/admin/settings' },
 ];
 
