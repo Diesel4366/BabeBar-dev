@@ -15,7 +15,7 @@ export async function GET(req: Request) {
       .from('appointments')
       .select('start_time, end_time')
       .eq('date', date)
-      .eq('status', 'active');
+      .in('status', ['active', 'pending_payment']);
 
     if (error) throw error;
 
