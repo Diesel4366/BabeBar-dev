@@ -259,7 +259,7 @@ function BookingContent() {
           date: selectedDate?.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) || '',
           time: selectedTime || '',
           services: selectedServices,
-          totalPrice: totalPrice
+          totalPrice: finalPrice
         } : null}
       />
 
