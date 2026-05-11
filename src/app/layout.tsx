@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import PWARegister from "@/components/PWARegister";
 
 
 const inter = Inter({
@@ -32,6 +33,7 @@ export const metadata: Metadata = {
     images: ['/og-image.jpg'],
   },
   robots: { index: true, follow: true },
+  themeColor: '#D14D72',
 };
 
 export default function RootLayout({
@@ -46,6 +48,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-[#FAFAFA] text-[#0A0A0A]">
         {children}
+        <PWARegister />
       </body>
     </html>
   );
