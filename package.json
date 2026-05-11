@@ -11,6 +11,7 @@
   "dependencies": {
     "@supabase/auth-helpers-nextjs": "^0.15.0",
     "@supabase/supabase-js": "^2.105.0",
+    "@twa-dev/sdk": "^8.0.2",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.38.0",

@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import PWARegister from "@/components/PWARegister";
+import TelegramProvider from "@/components/TelegramProvider";
 
 
 const inter = Inter({
@@ -46,7 +48,11 @@ export default function RootLayout({
       lang="ru"
       className={`${inter.variable} h-full antialiased scroll-smooth`}
     >
+      <head>
+        <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
+      </head>
       <body className="min-h-full flex flex-col bg-[#FAFAFA] text-[#0A0A0A]">
+        <TelegramProvider />
         {children}
         <PWARegister />
       </body>

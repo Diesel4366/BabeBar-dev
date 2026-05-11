@@ -25,9 +25,12 @@ async function editMsg(chatId: string | number, messageId: number, text: string,
   return tg('editMessageText', { chat_id: chatId, message_id: messageId, text, parse_mode: 'Markdown', reply_markup: replyMarkup });
 }
 
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://babe-bar.vercel.app').replace(/\/$/, '');
+
 const MAIN_MENU = {
   inline_keyboard: [
-    [{ text: '💅 Записаться', callback_data: 'view_services' }],
+    [{ text: '💅 Записаться онлайн', web_app: { url: `${SITE_URL}/booking` } }],
+    [{ text: '👤 Личный кабинет', web_app: { url: `${SITE_URL}/profile` } }],
     [{ text: '📅 Мои записи', callback_data: 'my_appointments' }],
   ],
 };
@@ -235,7 +238,7 @@ export async function POST(req: Request) {
 
       if (text === '/start' || text === '/menu' || text?.startsWith('/start ')) {
         if (!text?.startsWith('/start ')) {
-          await sendMsg(chatId, 'Добро пожаловать в *BABEBAR!* 🌟\n\nЗдесь вы можете записаться на услуги или посмотреть свои записи.', MAIN_MENU);
+          await sendMsg(chatId, 'Добро пожаловать в *BABEBAR!* 🌟\n\nЗаписывайтесь на услуги прямо здесь — не выходя из Telegram.', MAIN_MENU);
         }
 
         if (telegramId) {
