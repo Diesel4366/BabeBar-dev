@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Calendar, Clock, User, Phone,
-  CheckCircle2, XCircle, Search, Filter, X, Send, Plus,
+  CheckCircle2, XCircle, Search, Filter, X, Send, Plus, RotateCcw,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AdminNewAppointmentModal from '@/components/admin/AdminNewAppointmentModal';
@@ -18,6 +18,7 @@ interface AppointmentItem {
   status: AppointmentStatus;
   totalPrice: number;
   prepaidAmount: number;
+  paymentStatus: string;
   source: string | null;
   client: { name: string; phone: string; telegram_username?: string | null };
   services: { name: string }[];
@@ -64,6 +65,7 @@ export default function AdminAppointments() {
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
   const [page, setPage] = useState(1);
   const [showNewModal, setShowNewModal] = useState(false);
+  const [refunding, setRefunding] = useState<string | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(searchTerm), 300);
@@ -108,6 +110,27 @@ export default function AdminAppointments() {
     } catch (err) {
       console.error('Failed to update status:', err);
     }
+  };
+
+  const refund = async (app: AppointmentItem) => {
+    if (!confirm(`Вернуть ${app.prepaidAmount} ₽ клиенту ${app.client?.name}?`)) return;
+    setRefunding(app.id);
+    try {
+      const res = await fetch('/api/payment/tinkoff/refund', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ appointmentId: app.id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAppointments(prev => prev.map(a => a.id === app.id ? { ...a, paymentStatus: 'refunded' } : a));
+      } else {
+        alert(data.error ?? 'Ошибка возврата');
+      }
+    } catch {
+      alert('Ошибка соединения');
+    }
+    setRefunding(null);
   };
 
   const activeFiltersCount = (statusFilter !== 'all' ? 1 : 0) + (dateFilter !== 'all' ? 1 : 0);
@@ -309,9 +332,9 @@ export default function AdminAppointments() {
                     </div>
                   </div>
 
-                  <div className="flex gap-2 border-t lg:border-t-0 lg:border-l border-zinc-50 pt-6 lg:pt-0 lg:pl-10">
+                  <div className="flex flex-col gap-2 border-t lg:border-t-0 lg:border-l border-zinc-50 pt-6 lg:pt-0 lg:pl-10">
                     {app.status === 'active' && (
-                      <>
+                      <div className="flex gap-2">
                         <button
                           onClick={() => updateStatus(app.id, 'completed')}
                           className="flex-1 lg:flex-none bg-green-500 hover:bg-green-600 text-white px-5 md:px-8 py-4 rounded-xl md:rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all shadow-lg shadow-green-500/20 flex items-center justify-center gap-2"
@@ -326,7 +349,25 @@ export default function AdminAppointments() {
                           <XCircle size={16} />
                           <span className="hidden sm:inline">Отмена</span>
                         </button>
-                      </>
+                      </div>
+                    )}
+                    {app.prepaidAmount > 0 && app.paymentStatus === 'paid' && (
+                      <button
+                        onClick={() => refund(app)}
+                        disabled={refunding === app.id}
+                        className="bg-orange-50 hover:bg-orange-100 text-orange-500 px-5 py-3 rounded-xl md:rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                      >
+                        {refunding === app.id
+                          ? <div className="w-4 h-4 border-2 border-orange-300 border-t-orange-500 rounded-full animate-spin" />
+                          : <RotateCcw size={14} />
+                        }
+                        <span>Вернуть {app.prepaidAmount} ₽</span>
+                      </button>
+                    )}
+                    {app.paymentStatus === 'refunded' && (
+                      <div className="px-4 py-2 rounded-xl bg-zinc-50 text-[9px] font-black uppercase tracking-widest text-zinc-400 text-center">
+                        ✓ Возврат выполнен
+                      </div>
                     )}
                   </div>
                 </div>

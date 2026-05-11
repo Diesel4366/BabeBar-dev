@@ -46,6 +46,7 @@ export async function GET(req: Request) {
       status: app.status,
       totalPrice: app.total_price,
       prepaidAmount: app.prepaid_amount ?? 0,
+      paymentStatus: app.payment_status ?? 'not_required',
       source: app.source ?? null,
       client: app.client,
       services: app.services.map((s: any) => s.service),

@@ -52,3 +52,25 @@ export async function initPayment(opts: {
 
   return { paymentId: String(data.PaymentId), paymentUrl: data.PaymentURL };
 }
+
+export async function cancelPayment(paymentId: string, amount: number): Promise<boolean> {
+  const body: Record<string, unknown> = {
+    TerminalKey: process.env.TINKOFF_TERMINAL_KEY,
+    PaymentId: paymentId,
+    Amount: Math.round(amount * 100),
+  };
+  body['Token'] = generateToken(body);
+
+  const res = await fetch(`${BASE_URL}/Cancel`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  const data = await res.json();
+  if (!data.Success) {
+    console.error('Tinkoff Cancel failed:', data);
+    return false;
+  }
+  return true;
+}
