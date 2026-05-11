@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import ReactCrop, { type Crop, type PixelCrop, centerCrop, makeAspectCrop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
 import { Service } from '@/types';
 import { CATEGORY_ORDER } from '@/lib/config';
-import { Plus, Trash2, Edit2, Clock, X, Check, Package, Leaf, TrendingUp, ImagePlus } from 'lucide-react';
+import { Plus, Trash2, Edit2, Clock, X, Check, Package, Leaf, TrendingUp, ImagePlus, Crop as CropIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 type ServiceForm = Omit<Service, 'id' | 'created_at'>;
@@ -54,6 +56,11 @@ export default function AdminServices() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [costs, setCosts] = useState<Map<string, ServiceCost>>(new Map());
   const [imageUploading, setImageUploading] = useState(false);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [crop, setCrop] = useState<Crop>({ unit: '%', width: 80, height: 80, x: 10, y: 10 });
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop | null>(null);
+  const cropImgRef = useRef<HTMLImageElement>(null);
+  const pendingServiceId = useRef<string | null>(null);
 
   // Materials state
   const [serviceMaterials, setServiceMaterials] = useState<ServiceMaterial[]>([]);
@@ -140,12 +147,58 @@ export default function AdminServices() {
     } catch (e) { console.error(e); }
   };
 
-  const handleImageUpload = async (file: File) => {
+  const onFileSelect = (file: File) => {
+    pendingServiceId.current = modal?.service?.id ?? null;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setCropSrc(e.target?.result as string);
+      setCrop({ unit: '%', width: 80, height: 80, x: 10, y: 10 });
+      setCompletedCrop(null);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const onCropImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const { naturalWidth, naturalHeight } = e.currentTarget;
+    const c = centerCrop(
+      makeAspectCrop({ unit: '%', width: 90 }, 4 / 3, naturalWidth, naturalHeight),
+      naturalWidth, naturalHeight
+    );
+    setCrop(c);
+  };
+
+  const getCroppedBlob = (img: HTMLImageElement, pixelCrop: PixelCrop): Promise<Blob> => {
+    const canvas = document.createElement('canvas');
+    const maxDim = 1400;
+    const scaleX = img.naturalWidth / img.width;
+    const scaleY = img.naturalHeight / img.height;
+    const srcW = pixelCrop.width * scaleX;
+    const srcH = pixelCrop.height * scaleY;
+    const scale = Math.min(1, maxDim / Math.max(srcW, srcH));
+    canvas.width = Math.round(srcW * scale);
+    canvas.height = Math.round(srcH * scale);
+    const ctx = canvas.getContext('2d')!;
+    ctx.drawImage(img, pixelCrop.x * scaleX, pixelCrop.y * scaleY, srcW, srcH, 0, 0, canvas.width, canvas.height);
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(b => b ? resolve(b) : reject(new Error('Canvas empty')), 'image/jpeg', 0.88);
+    });
+  };
+
+  const handleCropConfirm = async () => {
+    if (!cropImgRef.current) return;
+    const pixelCrop = completedCrop ?? {
+      unit: 'px',
+      x: 0, y: 0,
+      width: cropImgRef.current.width,
+      height: cropImgRef.current.height,
+    } as PixelCrop;
+    setCropSrc(null);
     setImageUploading(true);
     try {
+      const blob = await getCroppedBlob(cropImgRef.current, pixelCrop);
       const fd = new FormData();
-      fd.append('image', file);
-      if (modal?.service?.id) fd.append('serviceId', modal.service.id);
+      fd.append('image', blob, 'service.jpg');
+      if (pendingServiceId.current) fd.append('serviceId', pendingServiceId.current);
       const res = await fetch('/api/admin/services/image', { method: 'POST', body: fd });
       const data = await res.json();
       if (data.url) setForm(f => ({ ...f, image_url: data.url }));
@@ -391,7 +444,7 @@ export default function AdminServices() {
                       type="file"
                       accept="image/*"
                       className="hidden"
-                      onChange={e => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); }}
+                      onChange={e => { const f = e.target.files?.[0]; if (f) onFileSelect(f); e.target.value = ''; }}
                     />
                     {form.image_url ? (
                       <div className="relative w-full h-40 rounded-2xl overflow-hidden border border-zinc-100">
@@ -601,6 +654,57 @@ export default function AdminServices() {
                  </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Crop Modal */}
+      {cropSrc && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-xl shadow-2xl overflow-hidden">
+            <div className="p-8 border-b border-zinc-100 flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-black uppercase tracking-tighter leading-none">
+                  Выберите <span style={{ color: '#D14D72' }} className="italic">область</span>
+                </h2>
+                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mt-1">Перетащите рамку или потяните углы</p>
+              </div>
+              <button onClick={() => setCropSrc(null)} className="text-zinc-300 hover:text-zinc-600 transition-colors">
+                <X size={24} />
+              </button>
+            </div>
+            <div className="p-6 flex justify-center bg-zinc-50 max-h-[60vh] overflow-auto">
+              <ReactCrop
+                crop={crop}
+                onChange={c => setCrop(c)}
+                onComplete={c => setCompletedCrop(c)}
+                aspect={4 / 3}
+                minWidth={50}
+              >
+                <img
+                  ref={cropImgRef}
+                  src={cropSrc}
+                  alt="crop"
+                  onLoad={onCropImageLoad}
+                  style={{ maxHeight: '55vh', maxWidth: '100%', display: 'block' }}
+                />
+              </ReactCrop>
+            </div>
+            <div className="p-8 flex gap-4 border-t border-zinc-100">
+              <button
+                onClick={() => setCropSrc(null)}
+                className="flex-1 py-5 rounded-2xl border border-zinc-100 font-black text-[10px] uppercase tracking-widest hover:bg-zinc-50 transition-colors"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={handleCropConfirm}
+                style={{ backgroundColor: '#D14D72' }}
+                className="flex-1 py-5 rounded-2xl text-white font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg"
+              >
+                <Check size={16} /> Применить
+              </button>
+            </div>
           </div>
         </div>
       )}

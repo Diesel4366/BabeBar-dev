@@ -19,10 +19,6 @@ export async function POST(req: Request) {
   if (!file || !file.type.startsWith('image/')) {
     return NextResponse.json({ error: 'Invalid file' }, { status: 400 });
   }
-  if (file.size > 5 * 1024 * 1024) {
-    return NextResponse.json({ error: 'File too large (max 5MB)' }, { status: 400 });
-  }
-
   const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
   const name = serviceId ? `${serviceId}.${ext}` : `${Date.now()}.${ext}`;
 
