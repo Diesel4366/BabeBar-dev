@@ -69,9 +69,7 @@ export async function POST(req: Request) {
   }
 
   const token = await createUserToken(profileId, process.env.ADMIN_SECRET!);
-  const redirectTo = isNew
-    ? '/link-phone'
-    : state === 'booking' ? '/booking?restore=1' : '/profile';
+  const redirectTo = state === 'booking' ? '/booking?restore=1' : '/profile';
 
   const res = NextResponse.json({ redirectTo });
   res.cookies.set('user_session', token, {

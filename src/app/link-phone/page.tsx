@@ -1,37 +1,17 @@
 'use client';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function LinkPhonePage() {
-  const router = useRouter();
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!phone || phone.replace(/\D/g, '').length < 10) return;
     setLoading(true);
-    setError('');
-
-    const res = await fetch('/api/auth/link-phone', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone }),
-    });
-
-    if (!res.ok) {
-      setError('Что-то пошло не так, попробуйте ещё раз');
-      setLoading(false);
-      return;
-    }
-
-    const data = await res.json();
-    if (data.merged) {
-      router.push('/profile?linked=1');
-    } else {
-      router.push('/profile');
-    }
+    window.location.href = `/api/auth/link-phone?phone=${encodeURIComponent(phone)}`;
   }
 
   return (
