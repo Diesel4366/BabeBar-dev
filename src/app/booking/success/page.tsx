@@ -12,6 +12,7 @@ interface AppointmentData {
   date: string;
   startTime: string;
   totalPrice: number;
+  prepaidAmount: number;
   services: string[];
 }
 
@@ -41,6 +42,7 @@ function SuccessContent() {
           date: formatDate(data.date),
           startTime: data.startTime?.slice(0, 5) ?? '',
           totalPrice: data.totalPrice ?? 0,
+          prepaidAmount: data.prepaidAmount ?? 0,
           services: data.services ?? [],
         });
       }
@@ -180,10 +182,20 @@ function SuccessContent() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-zinc-300 block mb-1">Оплачено</span>
-                    <div className="text-xl font-black" style={{ color: '#D14D72' }}>
-                      {appt ? `${appt.totalPrice} ₽` : '—'}
-                    </div>
+                    {appt && appt.prepaidAmount > 0 && appt.prepaidAmount < appt.totalPrice ? (
+                      <>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-300 block mb-1">Оплачено сейчас</span>
+                        <div className="text-xl font-black" style={{ color: '#D14D72' }}>{appt.prepaidAmount} ₽</div>
+                        <div className="text-[10px] font-bold text-zinc-400 mt-1">При визите: {appt.totalPrice - appt.prepaidAmount} ₽</div>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-300 block mb-1">Оплачено</span>
+                        <div className="text-xl font-black" style={{ color: '#D14D72' }}>
+                          {appt ? `${appt.prepaidAmount > 0 ? appt.prepaidAmount : appt.totalPrice} ₽` : '—'}
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

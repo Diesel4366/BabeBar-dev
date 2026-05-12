@@ -8,7 +8,7 @@ export async function GET(req: Request) {
 
   const { data } = await supabaseAdmin
     .from('appointments')
-    .select('status, payment_status, date, start_time, total_price, appointment_services ( services ( name ) )')
+    .select('status, payment_status, date, start_time, total_price, prepaid_amount, appointment_services ( services ( name ) )')
     .eq('id', id)
     .single();
 
@@ -16,7 +16,7 @@ export async function GET(req: Request) {
 
   const raw = data as unknown as {
     status: string; payment_status: string; date: string;
-    start_time: string; total_price: number;
+    start_time: string; total_price: number; prepaid_amount: number;
     appointment_services: { services: { name: string } | { name: string }[] | null }[];
   };
   const services = (raw.appointment_services ?? []).map(as => {
@@ -32,6 +32,7 @@ export async function GET(req: Request) {
     date: data.date,
     startTime: data.start_time,
     totalPrice: data.total_price,
+    prepaidAmount: raw.prepaid_amount ?? 0,
     services,
   });
 }

@@ -35,7 +35,7 @@ export async function POST(req: Request) {
       // Отправляем уведомления только если запись реально перешла в active
       // (eq status='pending_payment' защищает от повторной отправки при двойном вызове)
       if (updated) {
-        sendBookingNotifications(appointmentId).catch(console.error);
+        await sendBookingNotifications(appointmentId);
       }
       return NextResponse.json({ result: 'paid' });
     }
