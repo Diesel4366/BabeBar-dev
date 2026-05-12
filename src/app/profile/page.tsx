@@ -56,6 +56,9 @@ export default function ProfilePage() {
   const [editBirthday, setEditBirthday] = useState(false);
   const [birthdayInput, setBirthdayInput] = useState('');
   const [birthdaySaving, setBirthdaySaving] = useState(false);
+  const [phoneInput, setPhoneInput] = useState('');
+  const [phoneSaving, setPhoneSaving] = useState(false);
+  const [phoneMerged, setPhoneMerged] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -97,6 +100,23 @@ export default function ProfilePage() {
   const completed = appointments.filter(a => a.status === 'completed');
   const allVisits = appointments.filter(a => !a.status.startsWith('cancelled'));
   const totalSpent = completed.reduce((sum, a) => sum + (a.total_price || 0), 0);
+
+  const handleSavePhone = async () => {
+    if (!phoneInput || phoneInput.replace(/\D/g, '').length < 10) return;
+    setPhoneSaving(true);
+    const res = await fetch('/api/auth/link-phone', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: phoneInput }),
+    });
+    const data = await res.json();
+    setPhoneSaving(false);
+    if (res.ok) {
+      setPhoneMerged(data.merged);
+      setUser(u => u ? { ...u, phone: phoneInput } : u);
+      if (data.merged) window.location.reload();
+    }
+  };
 
   const handleSaveBirthday = async () => {
     setBirthdaySaving(true);
@@ -299,18 +319,45 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* Hint: add phone via bot (only if telegram_id exists but no phone) */}
-        {user?.telegram_id && !user?.phone && (
-          <div className="bg-white rounded-[2rem] border border-zinc-100 p-5 flex items-start gap-4">
-            <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-base" style={{ backgroundColor: '#D14D7218' }}>
-              📱
-            </div>
-            <div>
-              <div className="text-xs font-black uppercase tracking-widest">Добавить телефон</div>
-              <div className="text-zinc-400 text-sm font-medium mt-1 leading-relaxed">
-                Напишите боту <span className="font-black">/start</span> и отправьте свой контакт для завершения профиля.
+        {/* Phone link block — shown when profile has no phone */}
+        {!user?.phone && (
+          <div className="bg-white rounded-[2rem] border border-zinc-100 shadow-sm p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-base" style={{ backgroundColor: '#D14D7218' }}>
+                📱
+              </div>
+              <div>
+                <div className="text-xs font-black uppercase tracking-widest">Укажите номер телефона</div>
+                <div className="text-zinc-400 text-[11px] font-medium mt-0.5">
+                  Если вы уже записывались — аккаунты объединятся автоматически
+                </div>
               </div>
             </div>
+            <div className="flex gap-2">
+              <input
+                type="tel"
+                value={phoneInput}
+                onChange={e => setPhoneInput(e.target.value)}
+                placeholder="+7 (999) 000-00-00"
+                className="flex-1 px-4 py-3 rounded-2xl border border-zinc-200 text-sm font-medium focus:outline-none focus:border-[#D14D72] transition-colors"
+                onKeyDown={e => e.key === 'Enter' && handleSavePhone()}
+              />
+              <button
+                onClick={handleSavePhone}
+                disabled={phoneSaving || phoneInput.replace(/\D/g, '').length < 10}
+                className="px-5 py-3 rounded-2xl font-black text-xs uppercase tracking-widest text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-40 flex-shrink-0"
+                style={{ backgroundColor: '#D14D72' }}
+              >
+                {phoneSaving
+                  ? <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  : 'Сохранить'}
+              </button>
+            </div>
+            {phoneMerged && (
+              <div className="text-[11px] font-black uppercase tracking-widest text-green-500 text-center">
+                ✓ Аккаунты объединены
+              </div>
+            )}
           </div>
         )}
 
