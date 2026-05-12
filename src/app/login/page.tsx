@@ -5,6 +5,7 @@ import { supabaseAdmin } from '@/lib/supabase';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import MiniAppAutoAuth from '@/components/MiniAppAutoAuth';
+import VkAuthButton from '@/components/VkAuthButton';
 
 export default async function LoginPage(props: { searchParams: Promise<{ error?: string }> }) {
   const store = await cookies();
@@ -47,7 +48,7 @@ export default async function LoginPage(props: { searchParams: Promise<{ error?:
           </div>
         )}
 
-        <div className="bg-white rounded-[2rem] border border-zinc-100 shadow-sm p-8 space-y-6">
+        <div className="bg-white rounded-[2rem] border border-zinc-100 shadow-sm p-8 space-y-4">
           <Suspense>
             <MiniAppAutoAuth />
           </Suspense>
@@ -62,7 +63,9 @@ export default async function LoginPage(props: { searchParams: Promise<{ error?:
             Войти через Telegram
           </a>
 
-          <div className="relative">
+          <VkAuthButton state="" />
+
+          <div className="relative py-2">
             <span className="absolute inset-x-0 top-1/2 h-px bg-zinc-100" />
             <span className="relative bg-white px-4 text-[10px] font-black text-zinc-300 uppercase tracking-widest flex justify-center">
               или
