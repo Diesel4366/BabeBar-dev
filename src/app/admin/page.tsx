@@ -1,3 +1,5 @@
+export const revalidate = 60; // Кэш дашборда 1 минута
+
 import React from 'react';
 import Link from 'next/link';
 import {

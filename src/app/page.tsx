@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { supabaseAdmin } from '@/lib/supabase';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600; // Обновлять кэш раз в час
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
