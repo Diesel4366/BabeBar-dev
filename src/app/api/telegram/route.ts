@@ -201,6 +201,11 @@ async function handleMyAppointments(chatId: string | number, telegramId: string 
 export async function POST(req: Request) {
   if (!TOKEN) return NextResponse.json({ error: 'Token not set' }, { status: 500 });
 
+  const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
+  if (webhookSecret && req.headers.get('X-Telegram-Bot-Api-Secret-Token') !== webhookSecret) {
+    return NextResponse.json({ ok: true });
+  }
+
   try {
     const rawBody = await req.text();
     // Предотвращаем потерю точности для длинных Telegram ID (превращаем числа > 15 знаков в строки)
@@ -554,23 +559,38 @@ export async function POST(req: Request) {
       // Сама отмена
       if (data.startsWith('cancel_now:')) {
         const apptId = data.split(':')[1];
-        
-        // 1. Получаем данные записи перед отменой для уведомления
+
+        const { data: ownerProfile } = await supabaseAdmin
+          .from('profiles').select('id').eq('telegram_id', telegramId).maybeSingle();
+
+        if (!ownerProfile) {
+          await editMsg(chatId, messageId, '❌ Профиль не найден.', MAIN_MENU);
+          return NextResponse.json({ ok: true });
+        }
+
+        // 1. Получаем данные записи перед отменой (с проверкой владельца)
         const { data: appt } = await supabaseAdmin
           .from('appointments')
           .select(`
-            date, start_time, 
+            date, start_time,
             profiles(name, phone, telegram_username),
             appointment_services(services(name))
           `)
           .eq('id', apptId)
+          .eq('client_id', ownerProfile.id)
           .single();
 
-        // 2. Обновляем статус
+        if (!appt) {
+          await editMsg(chatId, messageId, '❌ Запись не найдена.', MAIN_MENU);
+          return NextResponse.json({ ok: true });
+        }
+
+        // 2. Обновляем статус (с проверкой владельца)
         const { error } = await supabaseAdmin
           .from('appointments')
           .update({ status: 'cancelled_by_client' })
-          .eq('id', apptId);
+          .eq('id', apptId)
+          .eq('client_id', ownerProfile.id);
 
         if (error) {
           await editMsg(chatId, messageId, '❌ Не удалось отменить запись. Попробуйте еще раз.', MAIN_MENU);

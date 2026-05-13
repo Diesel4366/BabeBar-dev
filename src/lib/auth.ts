@@ -43,6 +43,8 @@ async function getVerifyKey(secret: string): Promise<CryptoKey> {
   return _cachedVerifyKey;
 }
 
+const TOKEN_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
 export async function verifyAdminToken(token: string, secret: string): Promise<boolean> {
   try {
     const parts = token.split('.');
@@ -51,7 +53,12 @@ export async function verifyAdminToken(token: string, secret: string): Promise<b
     const encoder = new TextEncoder();
     const key = await getVerifyKey(secret);
     const sig = base64urlToBuffer(sigB64);
-    return await crypto.subtle.verify('HMAC', key, sig, encoder.encode(payloadB64));
+    const valid = await crypto.subtle.verify('HMAC', key, sig, encoder.encode(payloadB64));
+    if (!valid) return false;
+
+    const b64 = payloadB64.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - payloadB64.length % 4) % 4);
+    const { ts } = JSON.parse(atob(b64));
+    return typeof ts === 'number' && Date.now() - ts < TOKEN_MAX_AGE_MS;
   } catch {
     return false;
   }

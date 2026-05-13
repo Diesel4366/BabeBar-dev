@@ -21,6 +21,16 @@ export async function GET() {
   if (!url) return new Response(null, { status: 404 });
 
   try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:' ||
+        /^(localhost|127\.|0\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/i.test(parsed.hostname)) {
+      return new Response(null, { status: 403 });
+    }
+  } catch {
+    return new Response(null, { status: 400 });
+  }
+
+  try {
     const res = await fetch(url, {
       headers: { 'User-Agent': 'Mozilla/5.0' },
     });

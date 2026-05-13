@@ -66,32 +66,14 @@ export async function POST(req: Request) {
   const telegramId = String(tgUser.id);
   const name = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ');
 
-  // 1. Ищем по telegram_id
+  // Ищем только по telegram_id — username может сменить владелец, поэтому не используем его как идентификатор
   let { data: profile } = await supabaseAdmin
     .from('profiles')
     .select('id')
     .eq('telegram_id', telegramId)
     .maybeSingle();
 
-  // 2. Ищем по telegram_username как fallback (для пользователей, вошедших через OIDC)
-  if (!profile && tgUser.username) {
-    const { data: byUsername } = await supabaseAdmin
-      .from('profiles')
-      .select('id')
-      .eq('telegram_username', tgUser.username)
-      .maybeSingle();
-
-    if (byUsername) {
-      profile = byUsername;
-      // Привязываем реальный telegram_id к существующему профилю
-      await supabaseAdmin
-        .from('profiles')
-        .update({ telegram_id: telegramId, name })
-        .eq('id', byUsername.id);
-    }
-  }
-
-  // 3. Создаём новый профиль
+  // Создаём новый профиль
   if (!profile) {
     const { data: created, error } = await supabaseAdmin
       .from('profiles')
