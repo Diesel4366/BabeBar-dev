@@ -22,8 +22,8 @@ export default function VkAuthButton({ state }: { state?: string }) {
       const VKID = window.VKIDSDK;
 
       VKID.Config.init({
-        app: 54589669,
-        redirectUrl: 'https://babe-bar.vercel.app',
+        app: Number(process.env.NEXT_PUBLIC_VK_APP_ID) || 54589669,
+        redirectUrl: process.env.NEXT_PUBLIC_SITE_URL || 'https://babe-bar.vercel.app',
         responseMode: VKID.ConfigResponseMode.Callback,
         source: VKID.ConfigSource.LOWCODE,
         scope: '',
