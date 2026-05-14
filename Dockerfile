@@ -10,6 +10,8 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# Make NEXT_PUBLIC_* vars available at build time from the VPS env file
+RUN if [ -f .env.vps ]; then cp .env.vps .env.production.local; fi
 RUN npm run build
 
 FROM base AS runner
