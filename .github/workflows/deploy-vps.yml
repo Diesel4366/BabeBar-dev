@@ -3,6 +3,7 @@ name: Deploy to VPS
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -22,8 +23,8 @@ jobs:
             git pull origin main
 
             # Пересобрать и перезапустить контейнер
-            docker compose build --no-cache app
-            docker compose up -d --force-recreate app
+            docker compose -f docker-compose.vps.yml build --no-cache app
+            docker compose -f docker-compose.vps.yml up -d --force-recreate app
 
             # Убрать старые образы
             docker image prune -f
