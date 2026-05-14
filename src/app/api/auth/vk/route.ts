@@ -6,9 +6,13 @@ export async function GET(req: Request) {
   const state = url.searchParams.get('state') ?? '';
 
   const headersList = await headers();
-  const host = headersList.get('host') ?? 'babe-bar.vercel.app';
-  const proto = host.includes('localhost') ? 'http' : 'https';
-  const redirectUri = `${proto}://${host}/api/auth/vk/callback`;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '')
+    ?? (() => {
+      const host = headersList.get('host') ?? 'babe-bar.vercel.app';
+      const proto = host.includes('localhost') ? 'http' : 'https';
+      return `${proto}://${host}`;
+    })();
+  const redirectUri = `${siteUrl}/api/auth/vk/callback`;
 
   const params = new URLSearchParams({
     client_id: process.env.VK_APP_ID!,
