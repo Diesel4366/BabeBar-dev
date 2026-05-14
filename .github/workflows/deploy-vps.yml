@@ -1,0 +1,29 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          script: |
+            set -e
+            cd /opt/babebar-dev
+
+            git pull origin main
+
+            docker compose -f docker-compose.vps.yml build --no-cache app
+            docker compose -f docker-compose.vps.yml up -d --force-recreate app
+
+            docker image prune -f
+
+            echo "Deploy complete"
