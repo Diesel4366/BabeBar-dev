@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Lock, Eye, EyeOff } from 'lucide-react';
 
@@ -10,7 +9,6 @@ export default function AdminLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,14 +22,13 @@ export default function AdminLogin() {
       });
       const data = await res.json();
       if (data.success) {
-        router.push('/admin');
-        router.refresh();
+        window.location.href = '/admin';
       } else {
         setError(data.error || 'Неверный пароль');
+        setLoading(false);
       }
     } catch {
       setError('Ошибка соединения. Попробуйте ещё раз.');
-    } finally {
       setLoading(false);
     }
   };

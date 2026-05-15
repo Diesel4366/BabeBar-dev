@@ -1,15 +1,11 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { LogOut } from 'lucide-react';
 
 export default function LogoutButton({ isSidebar }: { isSidebar?: boolean }) {
-  const router = useRouter();
-
   const handleLogout = async () => {
     await fetch('/api/admin/logout', { method: 'POST' });
-    router.push('/admin/login');
-    router.refresh();
+    window.location.href = '/admin/login';
   };
 
   if (isSidebar) {
@@ -34,4 +30,3 @@ export default function LogoutButton({ isSidebar }: { isSidebar?: boolean }) {
     </button>
   );
 }
-

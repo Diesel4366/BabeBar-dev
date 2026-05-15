@@ -27,7 +27,7 @@ export const Hero = () => {
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
+            transition={{ duration: 0.8 }}
             className="text-5xl md:text-8xl font-black tracking-tighter leading-[0.9] text-[#0A0A0A] mb-8"
           >
             ЭСТЕТИКА <br />

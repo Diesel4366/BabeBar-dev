@@ -1,23 +1,9 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { supabaseAdmin } from '@/lib/supabase';
-import { verifyUserToken } from '@/lib/userAuth';
-
-async function isAdmin(req: Request): Promise<boolean> {
-  const store = await cookies();
-  const token = store.get('admin_session')?.value;
-  if (token) return true;
-  // fallback: check user_session with is_admin
-  const userToken = store.get('user_session')?.value;
-  if (!userToken) return false;
-  const profileId = await verifyUserToken(userToken, process.env.ADMIN_SECRET!);
-  if (!profileId) return false;
-  const { data } = await supabaseAdmin.from('profiles').select('is_admin').eq('id', profileId).maybeSingle();
-  return data?.is_admin === true;
-}
+import { checkAdminAuth } from '@/lib/adminAuth';
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  if (!await isAdmin(req)) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  if (!await checkAdminAuth(req)) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
 
   const { id } = await params;
   const body = await req.json() as {
