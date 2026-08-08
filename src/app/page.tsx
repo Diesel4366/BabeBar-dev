@@ -168,6 +168,7 @@ export default async function Home() {
               width="150"
               height="50"
               frameBorder={0}
+              loading="lazy"
               style={{ display: 'block' }}
             />
           </div>

@@ -11,13 +11,7 @@ interface Me {
   isAdmin: boolean;
 }
 
-function UserButton() {
-  const [me, setMe] = useState<Me | null | undefined>(undefined);
-
-  useEffect(() => {
-    fetch('/api/auth/me').then(r => r.json()).then(setMe).catch(() => setMe(null));
-  }, []);
-
+function UserButton({ me }: { me: Me | null | undefined }) {
   if (me === undefined) return <div className="w-9 h-9" />;
 
   if (!me) {
@@ -87,7 +81,7 @@ export const Header = () => {
               {link.name}
             </Link>
           ))}
-          <UserButton />
+          <UserButton me={me} />
           <Link href="/booking" className="btn-primary py-3 px-8">
             Записаться
           </Link>

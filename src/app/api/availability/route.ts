@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase';
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const date = searchParams.get('date');
+  const excludeId = searchParams.get('excludeId');
 
   if (!date) {
     return NextResponse.json({ error: 'Date is required' }, { status: 400 });
@@ -11,11 +12,15 @@ export async function GET(req: Request) {
 
   try {
     // Занятые интервалы
-    const { data: appointments, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('appointments')
       .select('start_time, end_time')
       .eq('date', date)
       .in('status', ['active', 'pending_payment']);
+
+    if (excludeId) query = query.neq('id', excludeId);
+
+    const { data: appointments, error } = await query;
 
     if (error) throw error;
 

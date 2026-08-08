@@ -19,15 +19,19 @@ export async function register() {
     }
   };
 
-  // Регистрируем webhook
-  const webhook = await post('setWebhook', { url: 'https://babebar.ru/api/telegram' });
+  // Регистрируем webhook (с секретом если задан)
+  const webhookBody: Record<string, string> = { url: 'https://babebar.ru/api/telegram' };
+  if (process.env.TELEGRAM_WEBHOOK_SECRET) {
+    webhookBody.secret_token = process.env.TELEGRAM_WEBHOOK_SECRET;
+  }
+  const webhook = await post('setWebhook', webhookBody);
   if (webhook?.ok) {
     console.log('[Telegram] Webhook registered:', webhook.description);
   } else {
     console.error('[Telegram] Webhook failed:', webhook?.description);
   }
 
-  // Регистрируем команды — создаёт кнопку-меню "/" в Telegram
+  // Регистрируем команды
   const commands = await post('setMyCommands', {
     commands: [
       { command: 'start', description: '🏠 Главное меню' },

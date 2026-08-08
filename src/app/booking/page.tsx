@@ -3,17 +3,14 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Clock, CheckCircle2, Phone, User, Star, ArrowRight, Plus, Tag, X } from 'lucide-react';
+import { ChevronLeft, Clock, CheckCircle2, Phone, User, Star, ArrowRight, Plus, LogIn } from 'lucide-react';
 import Link from 'next/link';
 import { Service } from '@/types';
 import { CATEGORY_ORDER } from '@/lib/config';
 import BookingSuccessModal from '@/components/BookingSuccessModal';
 
-function toLocalKey(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
+function toLocalDateKey(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
 function BookingContent() {
@@ -36,11 +33,6 @@ function BookingContent() {
   const [success, setSuccess] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [workingDates, setWorkingDates] = useState<Set<string>>(new Set());
-  const [promoInput, setPromoInput] = useState('');
-  const [promoData, setPromoData] = useState<{ codeId: string; percent: number; discount: number } | null>(null);
-  const [promoError, setPromoError] = useState<string | null>(null);
-  const [promoLoading, setPromoLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'online_50' | 'online_100'>('cash');
 
   // Derived service groups
   const mainServices = allServices.filter(s => !s.is_addon);
@@ -69,8 +61,7 @@ function BookingContent() {
           } catch {}
         }
       } else {
-        // Авторизация обязательна — редирект на логин с сохранением состояния
-        window.location.href = '/login?state=booking';
+        setAuthUser(null);
       }
     });
   }, [searchParams]);
@@ -79,10 +70,10 @@ function BookingContent() {
     async function loadData() {
       try {
         const today = new Date();
-        const from = toLocalKey(today);
+        const from = toLocalDateKey(today);
         const toDate = new Date(today);
         toDate.setDate(today.getDate() + 59);
-        const to = toLocalKey(toDate);
+        const to = toLocalDateKey(toDate);
 
         const [servicesRes, scheduleRes] = await Promise.all([
           fetch('/api/services'),
@@ -122,7 +113,7 @@ function BookingContent() {
     if (selectedDate) {
       async function checkAvailability() {
         try {
-          const formattedDate = toLocalKey(selectedDate!);
+          const formattedDate = toLocalDateKey(selectedDate!);
           const res = await fetch(`/api/availability?date=${formattedDate}`, { cache: 'no-store' });
           const data = await res.json();
           if (data.occupiedIntervals) setOccupiedIntervals(data.occupiedIntervals);
@@ -139,35 +130,6 @@ function BookingContent() {
   const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
   const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration_minutes, 0);
 
-  // Пересчитываем скидку при изменении набора услуг
-  useEffect(() => {
-    if (promoData) {
-      setPromoData(d => d ? { ...d, discount: Math.round(totalPrice * d.percent / 100) } : null);
-    }
-  }, [totalPrice]);
-
-  const finalPrice = totalPrice - (promoData?.discount ?? 0);
-  const paymentAmount = paymentMethod === 'online_50'
-    ? Math.ceil(finalPrice / 2)
-    : paymentMethod === 'online_100'
-      ? finalPrice
-      : 0;
-
-  const applyPromo = async () => {
-    if (!promoInput.trim()) return;
-    setPromoLoading(true);
-    setPromoError(null);
-    setPromoData(null);
-    const res = await fetch(`/api/promo/validate?code=${encodeURIComponent(promoInput.trim())}`);
-    const data = await res.json();
-    if (data.valid) {
-      setPromoData({ codeId: data.codeId, percent: data.percent, discount: Math.round(totalPrice * data.percent / 100) });
-    } else {
-      setPromoError(data.error || 'Промокод недействителен');
-    }
-    setPromoLoading(false);
-  };
-
   const toggleService = (service: Service) => {
     setSelectedServices(prev => {
       const exists = prev.find(s => s.id === service.id);
@@ -180,21 +142,18 @@ function BookingContent() {
     const toMins = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
     const newStart = toMins(time);
     const newEnd = newStart + totalDuration;
-
-    // Если выбран сегодняшний день — скрываем прошедшие слоты
-    if (selectedDate) {
-      const today = new Date();
-      const sel = selectedDate;
-      const isToday = sel.getFullYear() === today.getFullYear() &&
-        sel.getMonth() === today.getMonth() &&
-        sel.getDate() === today.getDate();
-      if (isToday) {
-        const nowMins = today.getHours() * 60 + today.getMinutes();
-        if (newStart <= nowMins) return false;
-      }
-    }
-
     return !occupiedIntervals.some(iv => newStart < toMins(iv.end) && newEnd > toMins(iv.start));
+  };
+
+  const handleTelegramLogin = () => {
+    sessionStorage.setItem('booking_state', JSON.stringify({
+      selectedServices,
+      selectedDate: selectedDate?.toISOString() ?? null,
+      selectedTime,
+      step,
+    }));
+    const redirectUri = encodeURIComponent(`${window.location.origin}/api/auth/telegram/callback`);
+    window.location.href = `https://oauth.telegram.org/auth?client_id=8752821995&redirect_uri=${redirectUri}&response_type=code&scope=openid+profile&state=booking`;
   };
 
   const formatPhone = (value: string) => {
@@ -221,16 +180,11 @@ function BookingContent() {
       const response = await fetch('/api/booking', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: formData.name, phone: formData.phone, date: selectedDate?.toISOString(), time: selectedTime, services: selectedServices, totalPrice: finalPrice, promoCodeId: promoData?.codeId, discountAmount: promoData?.discount ?? 0, paymentMethod, paymentAmount }),
+        body: JSON.stringify({ name: formData.name, phone: formData.phone, date: selectedDate?.toISOString(), time: selectedTime, services: selectedServices, totalPrice }),
       });
       const data = await response.json();
-      if (data.paymentUrl) {
-        window.location.href = data.paymentUrl;
-      } else if (data.success) {
-        setSuccess(true);
-      } else {
-        setBookingError(data.error || 'Ошибка при создании записи');
-      }
+      if (data.success) setSuccess(true);
+      else setBookingError(data.error || 'Ошибка при создании записи');
     } catch {
       setBookingError('Ошибка соединения с сервером. Попробуйте ещё раз.');
     } finally {
@@ -260,7 +214,7 @@ function BookingContent() {
           date: selectedDate?.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) || '',
           time: selectedTime || '',
           services: selectedServices,
-          totalPrice: finalPrice
+          totalPrice: totalPrice
         } : null}
       />
 
@@ -448,7 +402,7 @@ function BookingContent() {
                   {[...Array(60)].map((_, i) => {
                     const date = new Date();
                     date.setDate(date.getDate() + i);
-                    const dateKey = toLocalKey(date);
+                    const dateKey = toLocalDateKey(date);
                     const isWorking = workingDates.has(dateKey);
                     const isSelected = selectedDate?.toDateString() === date.toDateString();
                     return (
@@ -539,6 +493,19 @@ function BookingContent() {
 
               <form onSubmit={handleSubmit} className="space-y-12">
                 <div className="space-y-4">
+                  {/* Кнопка входа для незалогиненных */}
+                  {authUser === null && (
+                    <button
+                      type="button"
+                      onClick={handleTelegramLogin}
+                      className="w-full flex items-center justify-center gap-3 py-5 rounded-3xl border border-zinc-100 bg-white font-black text-sm uppercase tracking-widest text-zinc-600 hover:border-zinc-200 transition-all"
+                    >
+                      <LogIn size={18} style={{ color: '#D14D72' }} />
+                      Войти через Telegram
+                      <span className="text-[9px] font-black uppercase tracking-widest text-zinc-300 ml-1">— автозаполнение</span>
+                    </button>
+                  )}
+
                   {/* Бейдж авторизованного пользователя */}
                   {authUser && (
                     <div className="flex items-center gap-3 px-6 py-4 rounded-3xl border border-zinc-100 bg-white">
@@ -579,93 +546,10 @@ function BookingContent() {
                   </div>
                 </div>
 
-                {/* Promo code */}
-                <div className="space-y-3">
-                  {promoData ? (
-                    <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-green-50 border border-green-100">
-                      <Tag size={16} className="text-green-500 flex-shrink-0" />
-                      <span className="flex-1 text-sm font-black uppercase tracking-widest text-green-600">
-                        {promoInput.toUpperCase()} — скидка {promoData.percent}% ({promoData.discount} ₽)
-                      </span>
-                      <button onClick={() => { setPromoData(null); setPromoInput(''); }} className="text-green-300 hover:text-green-600">
-                        <X size={16} />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <Tag className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-300" size={16} />
-                        <input
-                          type="text"
-                          placeholder="Промокод"
-                          value={promoInput}
-                          onChange={e => { setPromoInput(e.target.value.toUpperCase()); setPromoError(null); }}
-                          onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), applyPromo())}
-                          className="w-full bg-white pl-12 pr-4 py-4 rounded-2xl border border-zinc-100 font-black text-sm uppercase tracking-widest outline-none focus:border-zinc-300"
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={applyPromo}
-                        disabled={promoLoading || !promoInput.trim()}
-                        className="px-5 py-4 rounded-2xl font-black text-xs uppercase tracking-widest border border-zinc-100 text-zinc-500 hover:border-zinc-300 transition-all disabled:opacity-40"
-                      >
-                        {promoLoading ? '...' : 'Применить'}
-                      </button>
-                    </div>
-                  )}
-                  {promoError && <p className="text-red-500 text-xs font-bold px-1">{promoError}</p>}
-                </div>
-
-                {/* Способ оплаты */}
-                <div className="space-y-3">
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 block">Способ оплаты</span>
-                  <div className="grid grid-cols-1 gap-2">
-                    {([
-                      { id: 'cash', label: 'Наличными при визите', sub: 'Оплата на месте' },
-                      { id: 'online_50', label: 'Предоплата 50%', sub: `${Math.ceil(finalPrice / 2)} ₽ сейчас + ${finalPrice - Math.ceil(finalPrice / 2)} ₽ при визите` },
-                      { id: 'online_100', label: 'Полная оплата онлайн', sub: `${finalPrice} ₽ сейчас` },
-                    ] as const).map(opt => (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        onClick={() => setPaymentMethod(opt.id)}
-                        className="flex items-center gap-4 px-5 py-4 rounded-2xl border text-left transition-all"
-                        style={{
-                          borderColor: paymentMethod === opt.id ? '#D14D72' : '#E4E4E7',
-                          backgroundColor: paymentMethod === opt.id ? 'rgba(209,77,114,0.04)' : 'white',
-                        }}
-                      >
-                        <div
-                          className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all"
-                          style={{
-                            borderColor: paymentMethod === opt.id ? '#D14D72' : '#D4D4D8',
-                            backgroundColor: paymentMethod === opt.id ? '#D14D72' : 'transparent',
-                          }}
-                        >
-                          {paymentMethod === opt.id && <div className="w-2 h-2 rounded-full bg-white" />}
-                        </div>
-                        <div>
-                          <div className="font-black text-sm uppercase tracking-tight text-[#0A0A0A]">{opt.label}</div>
-                          <div className="text-[10px] font-bold text-zinc-400 mt-0.5">{opt.sub}</div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 <div className="bg-[#0A0A0A] text-white p-10 rounded-[3rem] shadow-2xl space-y-10">
                   <div className="flex justify-between items-end border-b border-white/10 pb-8">
                     <span className="text-zinc-500 text-[10px] font-black uppercase tracking-widest">Итог записи</span>
-                    <div className="text-right">
-                      {promoData && (
-                        <div className="text-zinc-500 text-sm line-through leading-none mb-1">{totalPrice} ₽</div>
-                      )}
-                      <span className="text-3xl font-black leading-none">{finalPrice} ₽</span>
-                      {promoData && (
-                        <div className="text-green-400 text-[10px] font-black uppercase tracking-widest mt-1">−{promoData.discount} ₽</div>
-                      )}
-                    </div>
+                    <span className="text-3xl font-black leading-none">{totalPrice} ₽</span>
                   </div>
                   <div className="grid grid-cols-2 gap-8">
                     <div>
@@ -677,31 +561,6 @@ function BookingContent() {
                       <span className="font-bold text-sm uppercase">{selectedTime}</span>
                     </div>
                   </div>
-
-                  {/* Разбивка оплаты */}
-                  {paymentMethod !== 'cash' && (
-                    <div className="border-t border-white/10 pt-6 space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-zinc-400 text-[10px] font-black uppercase tracking-widest">К оплате сейчас</span>
-                        <span className="font-black text-lg" style={{ color: '#D14D72' }}>{paymentAmount} ₽</span>
-                      </div>
-                      {paymentMethod === 'online_50' && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-zinc-500 text-[10px] font-black uppercase tracking-widest">При визите</span>
-                          <span className="font-black text-sm text-zinc-400">{finalPrice - paymentAmount} ₽</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {paymentMethod === 'cash' && (
-                    <div className="border-t border-white/10 pt-6">
-                      <div className="flex justify-between items-center">
-                        <span className="text-zinc-400 text-[10px] font-black uppercase tracking-widest">Оплата при визите</span>
-                        <span className="font-black text-lg text-zinc-300">{finalPrice} ₽</span>
-                      </div>
-                    </div>
-                  )}
-
                   {bookingError && (
                     <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold px-5 py-4 rounded-2xl text-center">
                       {bookingError}
@@ -715,9 +574,7 @@ function BookingContent() {
                   >
                     {loading
                       ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                      : paymentMethod === 'cash'
-                        ? <>ПОДТВЕРДИТЬ ЗАПИСЬ <ArrowRight size={18} /></>
-                        : <>ПЕРЕЙТИ К ОПЛАТЕ <ArrowRight size={18} /></>
+                      : <>ПОДТВЕРДИТЬ <ArrowRight size={18} /></>
                     }
                   </button>
                 </div>
@@ -734,7 +591,7 @@ function BookingContent() {
           <div className="max-w-4xl mx-auto flex justify-between items-center gap-6">
             <div className="flex flex-col">
               <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest leading-none mb-1">Сумма</span>
-              <span className="text-xl font-black">{finalPrice} ₽</span>
+              <span className="text-xl font-black">{totalPrice} ₽</span>
             </div>
             <button
               disabled={step === 1 ? selectedServices.length === 0 : !selectedDate || !selectedTime}

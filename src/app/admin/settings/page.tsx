@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, X, Check, Trash2, Save } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Check, Trash2 } from 'lucide-react';
 
 const MONTH_NAMES = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 const DAY_NAMES = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
@@ -24,11 +24,8 @@ function toMonthKey(year: number, month: number) {
   return `${year}-${String(month + 1).padStart(2, '0')}`;
 }
 
-function toLocalKey(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
+function toLocalDateKey(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
 function buildCalendar(year: number, month: number): (Date | null)[] {
@@ -51,18 +48,6 @@ export default function AdminSettings() {
   const [modal, setModal] = useState<DayModal | null>(null);
   const [form, setForm] = useState({ is_working: false, start_time: '10:00', end_time: '21:00' });
   const [saving, setSaving] = useState(false);
-
-  // Настройки сайта
-  const [siteForm, setSiteForm] = useState({ address: '', phone: '', instagram: '', instagram_url: '', master_name: '' });
-  const [siteSaving, setSiteSaving] = useState(false);
-  const [siteSaved, setSiteSaved] = useState(false);
-
-  useEffect(() => {
-    fetch('/api/admin/settings')
-      .then(r => r.json())
-      .then(d => { if (d && !d.error) setSiteForm(f => ({ ...f, ...d })); })
-      .catch(() => {});
-  }, []);
 
   const fetchExceptions = useCallback(async (y: number, m: number) => {
     setIsLoading(true);
@@ -88,7 +73,7 @@ export default function AdminSettings() {
   };
 
   const openDay = (date: Date) => {
-    const key = toLocalKey(date);
+    const key = toLocalDateKey(date);
     const exception = exceptions[key] ?? null;
     setForm({
       is_working: exception ? exception.is_working : false,
@@ -129,29 +114,14 @@ export default function AdminSettings() {
     setSaving(false);
   };
 
-  const todayKey = toLocalKey(now);
+  const todayKey = toLocalDateKey(now);
   const cells = buildCalendar(year, month);
 
   const getDayState = (date: Date): 'working' | 'dayoff' | 'default' => {
-    const key = toLocalKey(date);
+    const key = toLocalDateKey(date);
     const ex = exceptions[key];
     if (!ex) return 'default';
     return ex.is_working ? 'working' : 'dayoff';
-  };
-
-  const handleSiteSave = async () => {
-    setSiteSaving(true);
-    try {
-      await fetch('/api/admin/settings', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(siteForm),
-      });
-      setSiteSaved(true);
-      setTimeout(() => setSiteSaved(false), 2500);
-    } finally {
-      setSiteSaving(false);
-    }
   };
 
   return (
@@ -159,57 +129,8 @@ export default function AdminSettings() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
           <h1 className="text-5xl font-black uppercase tracking-tighter leading-none mb-4">
-            Настройки <span className="text-primary italic">студии</span>
-          </h1>
-          <p className="text-zinc-400 font-medium uppercase text-[10px] tracking-[0.2em]">
-            Контакты, адрес и рабочее расписание
-          </p>
-        </div>
-      </div>
-
-      {/* Настройки сайта */}
-      <div className="bg-white rounded-[2rem] border border-zinc-100 shadow-sm p-8 space-y-6">
-        <h2 className="text-lg font-black uppercase tracking-tight">Контакты и информация</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {[
-            { key: 'address',       label: 'Адрес студии',    placeholder: 'Ул. Сазанова 2А, Нижний Новгород' },
-            { key: 'phone',         label: 'Телефон',         placeholder: '+7 (999) 120-21-12' },
-            { key: 'master_name',   label: 'Имя мастера',     placeholder: 'Нагина Полина' },
-            { key: 'instagram',     label: 'Instagram',       placeholder: '@babe_bar_nn' },
-            { key: 'instagram_url', label: 'Ссылка Instagram',placeholder: 'https://instagram.com/...' },
-          ].map(({ key, label, placeholder }) => (
-            <div key={key} className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">{label}</label>
-              <input
-                type="text"
-                value={siteForm[key as keyof typeof siteForm]}
-                onChange={e => setSiteForm(f => ({ ...f, [key]: e.target.value }))}
-                placeholder={placeholder}
-                className="w-full bg-zinc-50 border border-zinc-100 rounded-2xl px-5 py-4 font-medium text-sm outline-none focus:border-primary transition-colors"
-              />
-            </div>
-          ))}
-        </div>
-        <button
-          onClick={handleSiteSave}
-          disabled={siteSaving}
-          className="flex items-center gap-2 px-8 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white transition-all disabled:opacity-60"
-          style={{ backgroundColor: siteSaved ? '#22C55E' : '#D14D72' }}
-        >
-          {siteSaving
-            ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            : siteSaved
-              ? <><Check size={15} /> Сохранено</>
-              : <><Save size={15} /> Сохранить</>
-          }
-        </button>
-      </div>
-
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <div>
-          <h2 className="text-3xl font-black uppercase tracking-tighter leading-none mb-2">
             Рабочее <span className="text-primary italic">расписание</span>
-          </h2>
+          </h1>
           <p className="text-zinc-400 font-medium uppercase text-[10px] tracking-[0.2em]">
             Управление рабочими днями и выходными
           </p>
@@ -268,7 +189,7 @@ export default function AdminSettings() {
               {cells.map((date, i) => {
                 if (!date) return <div key={i} />;
 
-                const key = toLocalKey(date);
+                const key = toLocalDateKey(date);
                 const state = getDayState(date);
                 const isToday = key === todayKey;
                 const isPast = date < new Date(now.getFullYear(), now.getMonth(), now.getDate());

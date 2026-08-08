@@ -1,8 +1,16 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { normalizePhone } from '@/lib/phone';
+import { verifyAdminToken } from '@/lib/auth';
+async function checkAuth(req: Request): Promise<boolean> {
+  const secret = process.env.ADMIN_SECRET;
+  const cookie = req.headers.get('cookie') || '';
+  const session = cookie.split(';').find(c => c.trim().startsWith('admin_session='))?.split('=')[1];
+  return !(!session || !secret || !(await verifyAdminToken(session, secret)));
+}
 
 export async function POST(req: Request) {
+  if (!(await checkAuth(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const {
       profileId,

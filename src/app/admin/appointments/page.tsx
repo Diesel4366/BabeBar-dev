@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Calendar, Clock, User, Phone,
-  CheckCircle2, XCircle, Search, Filter, X, Send, Plus, RotateCcw, RefreshCw, CreditCard, Banknote,
+  CheckCircle2, XCircle, Search, Filter, X, Send, Plus, RotateCcw, RefreshCw, CreditCard, Banknote, Trash2, Pencil, Check,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AdminNewAppointmentModal from '@/components/admin/AdminNewAppointmentModal';
@@ -21,7 +21,16 @@ interface AppointmentItem {
   paymentStatus: string;
   source: string | null;
   client: { name: string; phone: string; telegram_username?: string | null };
-  services: { name: string }[];
+  services: { id: string; name: string; price: number; duration_minutes: number }[];
+}
+
+interface ServiceOption {
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+  duration_minutes: number;
+  is_active: boolean;
 }
 
 const STATUS_LABELS: Record<AppointmentStatus, string> = {
@@ -155,6 +164,17 @@ export default function AdminAppointments() {
       alert('Ошибка соединения');
     }
     setRefunding(null);
+  };
+
+  const deleteAppointment = async (app: AppointmentItem) => {
+    if (!confirm(`Удалить запись ${app.client?.name} (${new Date(app.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })})? Это действие необратимо.`)) return;
+    try {
+      const res = await fetch(`/api/admin/appointments?id=${app.id}`, { method: 'DELETE' });
+      if (res.ok) setAppointments(prev => prev.filter(a => a.id !== app.id));
+      else alert((await res.json()).error ?? 'Ошибка удаления');
+    } catch {
+      alert('Ошибка соединения');
+    }
   };
 
   const activeFiltersCount = (statusFilter !== 'all' ? 1 : 0) + (dateFilter !== 'all' ? 1 : 0);
@@ -409,6 +429,15 @@ export default function AdminAppointments() {
                         ✓ Возврат выполнен
                       </div>
                     )}
+                    {(app.status === 'cancelled_by_admin' || app.status === 'cancelled_by_client') && (
+                      <button
+                        onClick={() => deleteAppointment(app)}
+                        className="bg-red-50 hover:bg-red-100 text-red-500 px-5 py-3 rounded-xl md:rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                      >
+                        <Trash2 size={14} />
+                        <span>Удалить</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </motion.div>
@@ -479,6 +508,14 @@ export default function AdminAppointments() {
           <AppointmentDetailModal
             app={detailApp}
             onClose={() => setDetailApp(null)}
+            onSaved={() => {
+              setDetailApp(null);
+              fetchAppointments(page, statusFilter, dateFilter, debouncedSearch);
+            }}
+            onDeleted={() => {
+              setAppointments(prev => prev.filter(a => a.id !== detailApp.id));
+              setDetailApp(null);
+            }}
           />
         )}
       </AnimatePresence>
@@ -494,10 +531,171 @@ const PAYMENT_STATUS_LABELS: Record<string, string> = {
   refunded: 'Возврат выполнен',
 };
 
-function AppointmentDetailModal({ app, onClose }: { app: AppointmentItem; onClose: () => void }) {
+function toLocalKey(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function toMinsUI(t: string) {
+  const [h, m] = t.substring(0, 5).split(':').map(Number);
+  return h * 60 + m;
+}
+
+function AppointmentDetailModal({
+  app, onClose, onSaved, onDeleted,
+}: {
+  app: AppointmentItem;
+  onClose: () => void;
+  onSaved?: () => void;
+  onDeleted?: () => void;
+}) {
+  const [rescheduleMode, setRescheduleMode] = React.useState(false);
+  const [workingDates, setWorkingDates] = React.useState<Set<string>>(new Set());
+  const [selectedDate, setSelectedDate] = React.useState<string>('');
+  const [selectedTime, setSelectedTime] = React.useState<string>('');
+  const [workingHours, setWorkingHours] = React.useState<{ start: string; end: string } | null>(null);
+  const [occupiedIntervals, setOccupiedIntervals] = React.useState<{ start: string; end: string }[]>([]);
+  const [loadingSlots, setLoadingSlots] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
+  const [deleting, setDeleting] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [editServicesMode, setEditServicesMode] = React.useState(false);
+  const [allServices, setAllServices] = React.useState<ServiceOption[]>([]);
+  const [selectedServiceIds, setSelectedServiceIds] = React.useState<string[]>([]);
+  const [loadingServicesEdit, setLoadingServicesEdit] = React.useState(false);
+  const [savingServices, setSavingServices] = React.useState(false);
+
+  const duration = toMinsUI(app.endTime) - toMinsUI(app.startTime);
+
   const dateFormatted = new Date(app.date + 'T12:00:00').toLocaleDateString('ru-RU', {
     day: 'numeric', month: 'long', weekday: 'long',
   });
+
+  React.useEffect(() => {
+    if (!rescheduleMode) return;
+    const today = toLocalKey(new Date());
+    const to = toLocalKey(new Date(Date.now() + 60 * 24 * 60 * 60 * 1000));
+    fetch(`/api/schedule?from=${today}&to=${to}`)
+      .then(r => r.json())
+      .then((d: { date: string }[]) => setWorkingDates(new Set(Array.isArray(d) ? d.map(x => x.date) : [])));
+  }, [rescheduleMode]);
+
+  React.useEffect(() => {
+    if (!selectedDate) return;
+    setSelectedTime('');
+    setLoadingSlots(true);
+    fetch(`/api/availability?date=${selectedDate}&excludeId=${app.id}`)
+      .then(r => r.json())
+      .then(d => {
+        setOccupiedIntervals(d.occupiedIntervals ?? []);
+        setWorkingHours(d.workingHours ?? null);
+      })
+      .finally(() => setLoadingSlots(false));
+  }, [selectedDate, app.id]);
+
+  const isSlotAvailable = (t: string) => {
+    const start = toMinsUI(t);
+    const end = start + duration;
+    return !occupiedIntervals.some(iv => start < toMinsUI(iv.end) && end > toMinsUI(iv.start));
+  };
+
+  const timeSlots = React.useMemo(() => {
+    if (!workingHours) return [];
+    const slots: string[] = [];
+    const [sh, sm] = workingHours.start.split(':').map(Number);
+    const [eh, em] = workingHours.end.split(':').map(Number);
+    for (let mins = sh * 60 + sm; mins + duration <= eh * 60 + em; mins += 30) {
+      slots.push(`${Math.floor(mins / 60)}:${String(mins % 60).padStart(2, '0')}`);
+    }
+    return slots;
+  }, [workingHours, duration]);
+
+  const handleDelete = async () => {
+    if (!confirm(`Удалить запись ${app.client?.name}? Это действие необратимо.`)) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/appointments?id=${app.id}`, { method: 'DELETE' });
+      if (res.ok) onDeleted?.();
+      else setError((await res.json()).error ?? 'Ошибка удаления');
+    } catch {
+      setError('Ошибка соединения');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleReschedule = async () => {
+    if (!selectedDate || !selectedTime) { setError('Выберите дату и время'); return; }
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/admin/appointments', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: app.id, action: 'reschedule', date: selectedDate, startTime: selectedTime.padEnd(8, ':00').substring(0, 8) }),
+      });
+      const json = await res.json();
+      if (!res.ok) { setError(json.error ?? 'Ошибка'); return; }
+      onSaved?.();
+    } catch {
+      setError('Ошибка соединения');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (!editServicesMode) return;
+    setSelectedServiceIds(app.services.map(s => s.id));
+    setLoadingServicesEdit(true);
+    fetch('/api/admin/services')
+      .then(r => r.json())
+      .then((data: ServiceOption[]) => setAllServices(Array.isArray(data) ? data.filter(s => s.is_active) : []))
+      .finally(() => setLoadingServicesEdit(false));
+  }, [editServicesMode, app.services]);
+
+  const groupedServices = React.useMemo(() => {
+    return allServices.reduce<Record<string, ServiceOption[]>>((acc, s) => {
+      const cat = s.category || 'Прочее';
+      if (!acc[cat]) acc[cat] = [];
+      acc[cat].push(s);
+      return acc;
+    }, {});
+  }, [allServices]);
+
+  const newTotalPrice = React.useMemo(
+    () => allServices.filter(s => selectedServiceIds.includes(s.id)).reduce((sum, s) => sum + s.price, 0),
+    [allServices, selectedServiceIds]
+  );
+  const newTotalDuration = React.useMemo(
+    () => allServices.filter(s => selectedServiceIds.includes(s.id)).reduce((sum, s) => sum + s.duration_minutes, 0),
+    [allServices, selectedServiceIds]
+  );
+
+  const toggleService = (id: string) => {
+    setSelectedServiceIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleSaveServices = async () => {
+    if (!selectedServiceIds.length) { setError('Выберите хотя бы одну услугу'); return; }
+    setSavingServices(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/admin/appointments', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: app.id, action: 'update_services', serviceIds: selectedServiceIds }),
+      });
+      const json = await res.json();
+      if (!res.ok) { setError(json.error ?? 'Ошибка'); return; }
+      onSaved?.();
+    } catch {
+      setError('Ошибка соединения');
+    } finally {
+      setSavingServices(false);
+    }
+  };
 
   return (
     <>
@@ -627,16 +825,244 @@ function AppointmentDetailModal({ app, onClose }: { app: AppointmentItem; onClos
                 )}
               </div>
             </div>
+
+            {/* Edit services panel — inside scroll area so buttons are always reachable */}
+            {editServicesMode && (
+              <div className="border-t border-zinc-100 -mx-8 px-8 pt-5 space-y-4">
+                <div className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400">Изменить услуги</div>
+
+                {loadingServicesEdit ? (
+                  <div className="flex justify-center py-6">
+                    <div className="w-5 h-5 rounded-full border-2 border-zinc-100 animate-spin" style={{ borderTopColor: '#D14D72' }} />
+                  </div>
+                ) : (
+                  <>
+                    {Object.entries(groupedServices).map(([category, services]) => (
+                      <div key={category}>
+                        <div className="text-[9px] font-black uppercase tracking-widest text-zinc-300 mb-2">{category}</div>
+                        <div className="space-y-1.5">
+                          {services.map(service => {
+                            const isSelected = selectedServiceIds.includes(service.id);
+                            return (
+                              <button
+                                key={service.id}
+                                onClick={() => toggleService(service.id)}
+                                className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all text-left"
+                                style={{
+                                  backgroundColor: isSelected ? '#FFF0F4' : '#FAFAFA',
+                                  borderColor: isSelected ? '#D14D72' : '#F4F4F5',
+                                }}
+                              >
+                                <div
+                                  className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors"
+                                  style={{
+                                    borderColor: isSelected ? '#D14D72' : '#D4D4D8',
+                                    backgroundColor: isSelected ? '#D14D72' : 'transparent',
+                                  }}
+                                >
+                                  {isSelected && <Check size={11} color="white" />}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-sm font-bold text-[#0A0A0A] uppercase tracking-tight truncate">{service.name}</div>
+                                  <div className="text-[10px] text-zinc-400 font-medium">{service.duration_minutes} мин</div>
+                                </div>
+                                <div className="text-sm font-black flex-shrink-0" style={{ color: '#D14D72' }}>{service.price} ₽</div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+
+                    <div className="px-5 py-4 rounded-2xl bg-zinc-50 flex items-center justify-between">
+                      <div className="text-[9px] font-black uppercase tracking-widest text-zinc-400">
+                        {selectedServiceIds.length} услуг · {newTotalDuration} мин
+                      </div>
+                      <div className="text-xl font-black" style={{ color: '#D14D72' }}>{newTotalPrice} ₽</div>
+                    </div>
+                  </>
+                )}
+
+                {error && (
+                  <div className="px-4 py-3 rounded-2xl bg-red-50 text-red-600 text-xs font-bold">{error}</div>
+                )}
+
+                <div className="grid grid-cols-2 gap-2 pb-2">
+                  <button
+                    onClick={() => { setEditServicesMode(false); setError(null); }}
+                    className="py-4 rounded-2xl bg-zinc-100 text-[#0A0A0A] font-black text-[10px] uppercase tracking-widest hover:bg-zinc-200 transition-all"
+                  >
+                    Отмена
+                  </button>
+                  <button
+                    onClick={handleSaveServices}
+                    disabled={savingServices || !selectedServiceIds.length}
+                    className="py-4 rounded-2xl text-white font-black text-[10px] uppercase tracking-widest transition-all disabled:opacity-60"
+                    style={{ backgroundColor: '#D14D72' }}
+                  >
+                    {savingServices ? '...' : 'Сохранить'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Reschedule panel — inside scroll area so it's always reachable */}
+            {rescheduleMode && (
+              <div className="border-t border-zinc-100 -mx-8 px-8 pt-5 space-y-4">
+                {/* Calendar */}
+                <div>
+                  <div className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-4">Выберите новую дату</div>
+                  {workingDates.size === 0 ? (
+                    <div className="flex justify-center py-3">
+                      <div className="w-5 h-5 rounded-full border-2 border-zinc-100 animate-spin" style={{ borderTopColor: '#D14D72' }} />
+                    </div>
+                  ) : (
+                    <div className="flex gap-2 overflow-x-auto pb-3 -mx-2 px-2 no-scrollbar">
+                      {Array.from({ length: 60 }, (_, i) => {
+                        const d = new Date(); d.setDate(d.getDate() + i);
+                        const key = toLocalKey(d);
+                        const isWorking = workingDates.has(key);
+                        const isSel = selectedDate === key;
+                        return (
+                          <button
+                            key={key}
+                            disabled={!isWorking}
+                            onClick={() => { setSelectedDate(key); setSelectedTime(''); }}
+                            className="min-w-[58px] flex flex-col items-center justify-center py-3 rounded-2xl border transition-all flex-shrink-0"
+                            style={{
+                              backgroundColor: isSel ? '#D14D72' : isWorking ? 'white' : '#F4F4F5',
+                              borderColor: isSel ? '#D14D72' : isWorking ? '#E4E4E7' : '#F4F4F5',
+                              color: isSel ? 'white' : isWorking ? '#0A0A0A' : '#C4C4C8',
+                              opacity: isWorking || isSel ? 1 : 0.4,
+                              boxShadow: isSel ? '0 6px 20px rgba(209,77,114,0.25)' : 'none',
+                              cursor: isWorking ? 'pointer' : 'not-allowed',
+                            }}
+                          >
+                            <span className="text-[9px] font-black uppercase tracking-tighter" style={{ color: isSel ? 'rgba(255,255,255,0.7)' : '#A1A1AA' }}>
+                              {d.toLocaleDateString('ru-RU', { weekday: 'short' })}
+                            </span>
+                            <span className="text-lg font-black leading-none mt-0.5">{d.getDate()}</span>
+                            <span className="text-[9px] font-bold" style={{ color: isSel ? 'rgba(255,255,255,0.7)' : '#A1A1AA' }}>
+                              {d.toLocaleDateString('ru-RU', { month: 'short' })}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Time slots */}
+                {selectedDate && (
+                  <div>
+                    <div className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-3">Свободное время</div>
+                    {loadingSlots ? (
+                      <div className="flex justify-center py-4">
+                        <div className="w-5 h-5 rounded-full border-2 border-zinc-100 animate-spin" style={{ borderTopColor: '#D14D72' }} />
+                      </div>
+                    ) : workingHours === null ? (
+                      <div className="py-4 text-center rounded-2xl bg-zinc-50 text-zinc-400 text-[10px] font-black uppercase tracking-widest">
+                        Нерабочий день
+                      </div>
+                    ) : timeSlots.length === 0 ? (
+                      <div className="py-4 text-center rounded-2xl bg-zinc-50 text-zinc-400 text-[10px] font-black uppercase tracking-widest">
+                        Нет свободных слотов
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-4 gap-2">
+                        {timeSlots.map(t => {
+                          const avail = isSlotAvailable(t);
+                          const sel = selectedTime === t;
+                          return (
+                            <button
+                              key={t}
+                              disabled={!avail}
+                              onClick={() => setSelectedTime(t)}
+                              className="py-3 rounded-xl font-black text-xs border transition-all"
+                              style={{
+                                backgroundColor: sel ? '#D14D72' : avail ? 'white' : '#F9F9F9',
+                                borderColor: sel ? '#D14D72' : avail ? '#E4E4E7' : '#F4F4F5',
+                                color: sel ? 'white' : avail ? '#0A0A0A' : '#D4D4D8',
+                                opacity: avail || sel ? 1 : 0.5,
+                                cursor: avail ? 'pointer' : 'not-allowed',
+                                boxShadow: sel ? '0 4px 12px rgba(209,77,114,0.25)' : 'none',
+                              }}
+                            >
+                              {t}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {error && (
+                  <div className="px-4 py-3 rounded-2xl bg-red-50 text-red-600 text-xs font-bold">{error}</div>
+                )}
+
+                {/* Reschedule action buttons */}
+                <div className="grid grid-cols-2 gap-2 pb-2">
+                  <button
+                    onClick={() => { setRescheduleMode(false); setError(null); }}
+                    className="py-4 rounded-2xl bg-zinc-100 text-[#0A0A0A] font-black text-[10px] uppercase tracking-widest hover:bg-zinc-200 transition-all"
+                  >
+                    Отмена
+                  </button>
+                  <button
+                    onClick={handleReschedule}
+                    disabled={saving}
+                    className="py-4 rounded-2xl text-white font-black text-[10px] uppercase tracking-widest transition-all disabled:opacity-60"
+                    style={{ backgroundColor: '#D14D72' }}
+                  >
+                    {saving ? '...' : 'Сохранить'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="px-8 pb-8 pt-2">
-            <button
-              onClick={onClose}
-              className="w-full py-4 rounded-2xl bg-zinc-100 text-[#0A0A0A] font-black text-[10px] uppercase tracking-widest hover:bg-zinc-200 transition-all"
-            >
-              Закрыть
-            </button>
-          </div>
+          {/* Fixed footer — only shown when not in any editing mode */}
+          {!rescheduleMode && !editServicesMode && (
+            <div className="px-8 pb-8 pt-2 space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={onClose}
+                  className="py-4 rounded-2xl bg-zinc-100 text-[#0A0A0A] font-black text-[10px] uppercase tracking-widest hover:bg-zinc-200 transition-all"
+                >
+                  Закрыть
+                </button>
+                <button
+                  onClick={() => setRescheduleMode(true)}
+                  className="flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all border-2"
+                  style={{ borderColor: '#D14D72', color: '#D14D72' }}
+                >
+                  <RefreshCw size={13} />
+                  Перенести
+                </button>
+              </div>
+              <button
+                onClick={() => setEditServicesMode(true)}
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-zinc-50 hover:bg-zinc-100 text-[#0A0A0A] font-black text-[10px] uppercase tracking-widest transition-all"
+              >
+                <Pencil size={13} />
+                Изменить услуги
+              </button>
+              {(app.status === 'cancelled_by_admin' || app.status === 'cancelled_by_client') && (
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-red-50 hover:bg-red-100 text-red-500 font-black text-[10px] uppercase tracking-widest transition-all disabled:opacity-50"
+                >
+                  {deleting
+                    ? <div className="w-4 h-4 border-2 border-red-300 border-t-red-500 rounded-full animate-spin" />
+                    : <Trash2 size={13} />
+                  }
+                  Удалить запись
+                </button>
+              )}
+            </div>
+          )}
         </motion.div>
       </div>
     </>

@@ -1,7 +1,15 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { verifyAdminToken } from '@/lib/auth';
+async function checkAuth(req: Request): Promise<boolean> {
+  const secret = process.env.ADMIN_SECRET;
+  const cookie = req.headers.get('cookie') || '';
+  const session = cookie.split(';').find(c => c.trim().startsWith('admin_session='))?.split('=')[1];
+  return !(!session || !secret || !(await verifyAdminToken(session, secret)));
+}
 
-export async function GET() {
+export async function GET(req: Request) {
+  if (!(await checkAuth(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { data, error } = await supabaseAdmin
     .from('services')
     .select('*')
@@ -12,6 +20,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  if (!(await checkAuth(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const body = await req.json();
   const { data, error } = await supabaseAdmin
     .from('services')
@@ -23,6 +32,7 @@ export async function POST(req: Request) {
 }
 
 export async function PUT(req: Request) {
+  if (!(await checkAuth(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { id, ...updates } = await req.json();
   if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400 });
   const { data, error } = await supabaseAdmin
@@ -36,6 +46,7 @@ export async function PUT(req: Request) {
 }
 
 export async function DELETE(req: Request) {
+  if (!(await checkAuth(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const id = new URL(req.url).searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400 });
   const { error } = await supabaseAdmin.from('services').delete().eq('id', id);

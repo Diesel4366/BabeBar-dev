@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   Calendar,
+  CalendarDays,
   Users,
   Scissors,
   Settings,
@@ -23,6 +24,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 const MENU_ITEMS = [
   { name: 'Дашборд', icon: LayoutDashboard, href: '/admin' },
   { name: 'Записи', icon: Calendar, href: '/admin/appointments' },
+  { name: 'Календарь', icon: CalendarDays, href: '/admin/calendar' },
   { name: 'Услуги', icon: Scissors, href: '/admin/services' },
   { name: 'Клиенты', icon: Users, href: '/admin/clients' },
   { name: 'Склад', icon: Package, href: '/admin/inventory' },

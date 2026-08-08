@@ -1,8 +1,16 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { supabaseAdmin } from '@/lib/supabase';
 import { cancelPayment, TinkoffReceipt } from '@/lib/tinkoff';
+import { verifyAdminToken } from '@/lib/auth';
 
 export async function POST(req: Request) {
+  const store = await cookies();
+  const adminToken = store.get('admin_session')?.value;
+  const secret = process.env.ADMIN_SECRET!;
+  const isAdmin = adminToken ? !!(await verifyAdminToken(adminToken, secret)) : false;
+  if (!isAdmin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   try {
     const { appointmentId } = await req.json();
     if (!appointmentId) return NextResponse.json({ error: 'Missing appointmentId' }, { status: 400 });

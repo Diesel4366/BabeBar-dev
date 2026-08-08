@@ -221,22 +221,52 @@ export async function POST(req: Request) {
 
       // ── Handle /start with ID ──────────────────────────────────────────────
       if (text?.startsWith('/start ')) {
-        const profileId = text.split(' ')[1]; // Получаем ID профиля из ссылки
+        const profileId = text.split(' ')[1];
         if (profileId && telegramId) {
-          // Привязываем этот Telegram ID к профилю
           const { error } = await supabaseAdmin
             .from('profiles')
-            .update({ 
+            .update({
               telegram_id: telegramId,
               telegram_username: message.from?.username ?? null,
-              telegram_chat_id: String(chatId)
+              telegram_chat_id: String(chatId),
             })
             .eq('id', profileId);
 
           if (!error) {
             await sendMsg(chatId, '✅ *Аккаунт успешно связан!*\n\nТеперь вы можете смотреть свои записи и записываться онлайн. Не забудьте поделиться номером телефона ниже.');
           } else {
-            await sendMsg(chatId, '❌ Ошибка при связывании аккаунта. Попробуйте ещё раз из личного кабинета.');
+            // telegram_id уже занят другим профилем — объединяем
+            const { data: existing } = await supabaseAdmin
+              .from('profiles')
+              .select('id, vk_id, phone, telegram_username')
+              .eq('telegram_id', telegramId)
+              .maybeSingle();
+
+            const { data: newProfile } = await supabaseAdmin
+              .from('profiles')
+              .select('vk_id, phone')
+              .eq('id', profileId)
+              .maybeSingle();
+
+            if (existing) {
+              // Переносим vk_id и phone если их нет в существующем профиле
+              const patch: Record<string, string> = {
+                telegram_username: message.from?.username ?? existing.telegram_username,
+                telegram_chat_id: String(chatId),
+              };
+              if (!existing.vk_id && newProfile?.vk_id) patch.vk_id = newProfile.vk_id;
+              if (!existing.phone && newProfile?.phone) patch.phone = newProfile.phone;
+
+              await supabaseAdmin.from('profiles').update(patch).eq('id', existing.id);
+
+              // Переносим записи на объединённый профиль и удаляем дубль
+              await supabaseAdmin.from('appointments').update({ client_id: existing.id }).eq('client_id', profileId);
+              await supabaseAdmin.from('profiles').delete().eq('id', profileId);
+
+              await sendMsg(chatId, '✅ *Аккаунт успешно связан!*\n\nТеперь вы можете смотреть свои записи и записываться онлайн. Не забудьте поделиться номером телефона ниже.');
+            } else {
+              await sendMsg(chatId, '❌ Ошибка при связывании аккаунта. Попробуйте ещё раз из личного кабинета.');
+            }
           }
         }
       }

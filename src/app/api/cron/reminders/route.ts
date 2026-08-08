@@ -1,102 +1,163 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { format, addHours, startOfMinute } from 'date-fns';
-import { ru } from 'date-fns/locale';
 
 const TOKEN = process.env.TELEGRAM_TOKEN;
+// Салон работает в UTC+3 (Москва)
+const TZ_OFFSET_H = 3;
 
 async function sendMsg(chatId: string | number, text: string) {
-  if (!TOKEN) return;
+  if (!TOKEN) return null;
   return fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' }),
+    body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
   });
 }
 
+function toLocalDate(utcDate: Date): Date {
+  return new Date(utcDate.getTime() + TZ_OFFSET_H * 60 * 60 * 1000);
+}
+
+function formatDate(d: Date) {
+  return d.toISOString().slice(0, 10);
+}
+
+function serviceNames(app: any): string {
+  return (app.appointment_services as any[])
+    .map((s: any) => s.services?.name)
+    .filter(Boolean)
+    .join(', ');
+}
+
+const SELECT = `
+  id, start_time, date,
+  reminder_sent, reminder_morning_sent, reminder_day_before_sent,
+  profiles ( id, name, telegram_chat_id, telegram_id ),
+  appointment_services ( services ( name ) )
+`;
+
 export async function GET(req: Request) {
-  // Проверка безопасности согласно инструкции Vercel
   const authHeader = req.headers.get('Authorization');
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  if (!TOKEN) {
-    return NextResponse.json({ error: 'Telegram token not set' }, { status: 500 });
-  }
+  if (!TOKEN) return NextResponse.json({ error: 'Telegram token not set' }, { status: 500 });
 
-  try {
-    const now = new Date();
-    const todayStr = format(now, 'yyyy-MM-dd');
-    
-    // Ищем записи на ближайшие 2 часа. 
-    // Поскольку крон запускается раз в час, мы берем запас, 
-    // чтобы точно попасть в интервал.
-    const startTimeMin = format(now, 'HH:mm:ss');
-    const startTimeMax = format(addHours(now, 2.1), 'HH:mm:ss');
+  const nowUtc = new Date();
+  const nowLocal = toLocalDate(nowUtc);
+  const localHour = nowLocal.getUTCHours();
+  const todayStr = formatDate(nowLocal);
 
-    const { data: appointments, error } = await supabaseAdmin
+  const tomorrowLocal = new Date(nowLocal);
+  tomorrowLocal.setDate(tomorrowLocal.getDate() + 1);
+  const tomorrowStr = formatDate(tomorrowLocal);
+
+  const results = { dayBefore: 0, morning: 0, hourBefore: 0, errors: [] as string[] };
+
+  // ── 1. За день до записи (отправляем 9:00–10:59 по Москве) ───────────
+  if (localHour >= 9 && localHour < 11) {
+    const { data: apps } = await supabaseAdmin
       .from('appointments')
-      .select(`
-        id, 
-        start_time, 
-        date,
-        profiles (
-          id, 
-          name, 
-          telegram_chat_id,
-          telegram_id
-        ),
-        appointment_services (
-          services (name)
-        )
-      `)
-      .eq('date', todayStr)
+      .select(SELECT)
+      .eq('date', tomorrowStr)
       .eq('status', 'active')
-      .eq('reminder_sent', false)
-      .gte('start_time', startTimeMin)
-      .lte('start_time', startTimeMax);
+      .eq('reminder_day_before_sent', false);
 
-    if (error) throw error;
+    for (const app of apps ?? []) {
+      try {
+        const profile = app.profiles as any;
+        const chatId = profile?.telegram_chat_id || profile?.telegram_id;
+        if (!chatId) continue;
 
-    if (!appointments || appointments.length === 0) {
-      return NextResponse.json({ message: 'No appointments to remind' });
-    }
-
-    const results = [];
-
-    for (const app of appointments) {
-      const profile = app.profiles as any;
-      const chatId = profile?.telegram_chat_id || profile?.telegram_id;
-
-      if (chatId) {
-        const services = (app.appointment_services as any[])
-          .map(s => s.services?.name)
-          .filter(Boolean)
-          .join(', ');
-
-        const time = app.start_time.substring(0, 5);
-        const text = `🌟 *Напоминание от BABEBAR!*\n\nСегодня в *${time}* ждём вас на услуги:\n💅 ${services}\n\nДо встречи! ✨`;
+        const time = (app.start_time as string).slice(0, 5);
+        const name = profile.name?.split(' ')[0] ?? '';
+        const text =
+          `📅 <b>${name ? name + ', напоминаем!' : 'Напоминание!'}</b>\n\n` +
+          `Завтра в <b>${time}</b> ждём вас на:\n💅 ${serviceNames(app)}\n\n` +
+          `Ждём вас в <b>BABEBAR</b>! Если планы изменились — дайте знать заранее 🙏`;
 
         const res = await sendMsg(chatId, text);
         if (res?.ok) {
-          await supabaseAdmin
-            .from('appointments')
-            .update({ reminder_sent: true })
-            .eq('id', app.id);
-          
-          results.push({ id: app.id, status: 'sent' });
-        } else {
-          results.push({ id: app.id, status: 'error', tg_res: await res?.json() });
+          await supabaseAdmin.from('appointments').update({ reminder_day_before_sent: true }).eq('id', app.id);
+          results.dayBefore++;
         }
-      } else {
-        results.push({ id: app.id, status: 'no_chat_id' });
+      } catch (e: any) {
+        results.errors.push(`dayBefore ${app.id}: ${e.message}`);
       }
     }
-
-    return NextResponse.json({ processed: appointments.length, results });
-  } catch (error: any) {
-    console.error('Reminder Cron Error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  // ── 2. Утро в день записи (9:00–10:59 по Москве) ─────────────────────
+  if (localHour >= 9 && localHour < 11) {
+    const { data: apps } = await supabaseAdmin
+      .from('appointments')
+      .select(SELECT)
+      .eq('date', todayStr)
+      .eq('status', 'active')
+      .eq('reminder_morning_sent', false);
+
+    for (const app of apps ?? []) {
+      try {
+        const profile = app.profiles as any;
+        const chatId = profile?.telegram_chat_id || profile?.telegram_id;
+        if (!chatId) continue;
+
+        const time = (app.start_time as string).slice(0, 5);
+        const name = profile.name?.split(' ')[0] ?? '';
+        const text =
+          `☀️ <b>Доброе утро${name ? ', ' + name : ''}!</b>\n\n` +
+          `Сегодня в <b>${time}</b> ждём вас на:\n💅 ${serviceNames(app)}\n\n` +
+          `До встречи в <b>BABEBAR</b>! ✨`;
+
+        const res = await sendMsg(chatId, text);
+        if (res?.ok) {
+          await supabaseAdmin.from('appointments').update({ reminder_morning_sent: true }).eq('id', app.id);
+          results.morning++;
+        }
+      } catch (e: any) {
+        results.errors.push(`morning ${app.id}: ${e.message}`);
+      }
+    }
+  }
+
+  // ── 3. За час до записи (50–80 минут до старта) ───────────────────────
+  const in50min = new Date(nowLocal.getTime() + 50 * 60 * 1000);
+  const in80min = new Date(nowLocal.getTime() + 80 * 60 * 1000);
+  const timeFrom = in50min.toISOString().slice(11, 19);
+  const timeTo   = in80min.toISOString().slice(11, 19);
+
+  const { data: appsHour } = await supabaseAdmin
+    .from('appointments')
+    .select(SELECT)
+    .eq('date', todayStr)
+    .eq('status', 'active')
+    .eq('reminder_sent', false)
+    .gte('start_time', timeFrom)
+    .lte('start_time', timeTo);
+
+  for (const app of appsHour ?? []) {
+    try {
+      const profile = app.profiles as any;
+      const chatId = profile?.telegram_chat_id || profile?.telegram_id;
+      if (!chatId) continue;
+
+      const time = (app.start_time as string).slice(0, 5);
+      const name = profile.name?.split(' ')[0] ?? '';
+      const text =
+        `⏰ <b>${name ? name + ', совсем скоро!' : 'Совсем скоро!'}</b>\n\n` +
+        `Через час в <b>${time}</b> ждём вас на:\n💅 ${serviceNames(app)}\n\n` +
+        `<b>BABEBAR</b>, ул. Сазанова 2А 📍`;
+
+      const res = await sendMsg(chatId, text);
+      if (res?.ok) {
+        await supabaseAdmin.from('appointments').update({ reminder_sent: true }).eq('id', app.id);
+        results.hourBefore++;
+      }
+    } catch (e: any) {
+      results.errors.push(`hourBefore ${app.id}: ${e.message}`);
+    }
+  }
+
+  return NextResponse.json(results);
 }

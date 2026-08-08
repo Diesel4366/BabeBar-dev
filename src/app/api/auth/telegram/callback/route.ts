@@ -26,7 +26,7 @@ async function fetchBotApiPhoto(telegramId: string): Promise<string | null> {
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const origin = url.origin;
+  const origin = process.env.NEXT_PUBLIC_SITE_URL || url.origin;
   const fail = (msg?: string) => {
     console.error('Auth fail:', msg);
     const errorParam = msg ? encodeURIComponent(msg) : '1';

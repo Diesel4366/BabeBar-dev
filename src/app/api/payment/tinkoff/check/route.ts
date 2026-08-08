@@ -1,9 +1,20 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { supabaseAdmin } from '@/lib/supabase';
 import { getPaymentState } from '@/lib/tinkoff';
 import { sendBookingNotifications } from '@/lib/booking-notifications';
+import { verifyUserToken } from '@/lib/userAuth';
+import { verifyAdminToken } from '@/lib/auth';
 
 export async function POST(req: Request) {
+  const store = await cookies();
+  const secret = process.env.ADMIN_SECRET!;
+  const userToken = store.get('user_session')?.value;
+  const adminToken = store.get('admin_session')?.value;
+  const isUser = userToken ? !!(await verifyUserToken(userToken, secret)) : false;
+  const isAdmin = adminToken ? !!(await verifyAdminToken(adminToken, secret)) : false;
+  if (!isUser && !isAdmin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   try {
     const { appointmentId } = await req.json();
     if (!appointmentId) return NextResponse.json({ error: 'Missing appointmentId' }, { status: 400 });
@@ -32,8 +43,6 @@ export async function POST(req: Request) {
         .select('id')
         .maybeSingle();
 
-      // Отправляем уведомления только если запись реально перешла в active
-      // (eq status='pending_payment' защищает от повторной отправки при двойном вызове)
       if (updated) {
         await sendBookingNotifications(appointmentId);
       }

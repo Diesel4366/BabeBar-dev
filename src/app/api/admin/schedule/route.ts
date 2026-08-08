@@ -6,8 +6,10 @@ export async function GET(req: Request) {
   const month = new URL(req.url).searchParams.get('month');
   if (!month) return NextResponse.json({ error: 'month required' }, { status: 400 });
 
+  const [y, m] = month.split('-').map(Number);
   const from = `${month}-01`;
-  const to = `${month}-31`;
+  const lastDay = new Date(y, m, 0).getDate();
+  const to = `${month}-${String(lastDay).padStart(2, '0')}`;
 
   const { data, error } = await supabaseAdmin
     .from('schedule_exceptions')

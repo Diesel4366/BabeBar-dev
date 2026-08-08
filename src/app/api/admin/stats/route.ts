@@ -1,8 +1,16 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { verifyAdminToken } from '@/lib/auth';
+async function checkAuth(req: Request): Promise<boolean> {
+  const secret = process.env.ADMIN_SECRET;
+  const cookie = req.headers.get('cookie') || '';
+  const session = cookie.split(';').find(c => c.trim().startsWith('admin_session='))?.split('=')[1];
+  return !(!session || !secret || !(await verifyAdminToken(session, secret)));
+}
 import { format } from 'date-fns';
 
-export async function GET() {
+export async function GET(req: Request) {
+  if (!(await checkAuth(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const now = new Date();
     const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Moscow' }).format(now);

@@ -14,23 +14,32 @@ async function hmacKey(secret: string) {
   return crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
 }
 
+const TOKEN_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
 export async function createUserToken(profileId: string, secret: string): Promise<string> {
   const enc = new TextEncoder();
   const key = await hmacKey(secret);
-  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(profileId));
-  const idB64 = btoa(profileId).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-  return `${idB64}.${b64url(sig)}`;
+  const payload = btoa(JSON.stringify({ id: profileId, ts: Date.now() }))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(payload));
+  return `${payload}.${b64url(sig)}`;
 }
 
 export async function verifyUserToken(token: string, secret: string): Promise<string | null> {
   const parts = token.split('.');
   if (parts.length !== 2) return null;
   try {
-    const profileId = atob(parts[0].replace(/-/g, '+').replace(/_/g, '/'));
+    const [payloadB64, sigB64] = parts;
     const enc = new TextEncoder();
     const key = await hmacKey(secret);
-    const valid = await crypto.subtle.verify('HMAC', key, b64urlDecode(parts[1]), enc.encode(profileId));
-    return valid ? profileId : null;
+    const valid = await crypto.subtle.verify('HMAC', key, b64urlDecode(sigB64), enc.encode(payloadB64));
+    if (!valid) return null;
+
+    const padding = '='.repeat((4 - (payloadB64.length % 4)) % 4);
+    const { id, ts } = JSON.parse(atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/') + padding));
+    if (typeof ts !== 'number' || Date.now() - ts > TOKEN_MAX_AGE_MS) return null;
+    if (typeof id !== 'string' || !id) return null;
+    return id;
   } catch {
     return null;
   }
