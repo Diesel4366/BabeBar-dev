@@ -1,21 +1,41 @@
-import { scrypt, randomBytes, timingSafeEqual } from 'node:crypto';
-import { promisify } from 'node:util';
+const PBKDF2_ITERATIONS = 210_000; // OWASP-recommended minimum for PBKDF2-SHA256
 
-const scryptAsync = promisify(scrypt);
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function hexToBytes(hex: string): Uint8Array {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < bytes.length; i++) bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
+  return bytes;
+}
+
+async function pbkdf2(password: string, salt: Uint8Array): Promise<ArrayBuffer> {
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']
+  );
+  return crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt: salt as BufferSource, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
+    keyMaterial,
+    256
+  );
+}
 
 export async function hashPassword(password: string): Promise<string> {
-  const salt = randomBytes(16).toString('hex');
-  const hash = (await scryptAsync(password, salt, 64)) as Buffer;
-  return `${salt}:${hash.toString('hex')}`;
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const bits = await pbkdf2(password, salt);
+  return `${bytesToHex(salt)}:${bytesToHex(new Uint8Array(bits))}`;
 }
 
 export async function verifyPassword(password: string, stored: string): Promise<boolean> {
-  const [salt, hashHex] = stored.split(':');
-  if (!salt || !hashHex) return false;
-  const hash = (await scryptAsync(password, salt, 64)) as Buffer;
-  const storedBuf = Buffer.from(hashHex, 'hex');
-  if (hash.length !== storedBuf.length) return false;
-  return timingSafeEqual(hash, storedBuf);
+  const [saltHex, hashHex] = stored.split(':');
+  if (!saltHex || !hashHex) return false;
+  const bits = await pbkdf2(password, hexToBytes(saltHex));
+  const computedHex = bytesToHex(new Uint8Array(bits));
+  if (computedHex.length !== hashHex.length) return false;
+  let diff = 0;
+  for (let i = 0; i < computedHex.length; i++) diff |= computedHex.charCodeAt(i) ^ hashHex.charCodeAt(i);
+  return diff === 0;
 }
 
 function bytesToBase64url(buf: ArrayBuffer): string {
