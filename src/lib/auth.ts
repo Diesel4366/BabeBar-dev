@@ -1,3 +1,23 @@
+import { scrypt, randomBytes, timingSafeEqual } from 'node:crypto';
+import { promisify } from 'node:util';
+
+const scryptAsync = promisify(scrypt);
+
+export async function hashPassword(password: string): Promise<string> {
+  const salt = randomBytes(16).toString('hex');
+  const hash = (await scryptAsync(password, salt, 64)) as Buffer;
+  return `${salt}:${hash.toString('hex')}`;
+}
+
+export async function verifyPassword(password: string, stored: string): Promise<boolean> {
+  const [salt, hashHex] = stored.split(':');
+  if (!salt || !hashHex) return false;
+  const hash = (await scryptAsync(password, salt, 64)) as Buffer;
+  const storedBuf = Buffer.from(hashHex, 'hex');
+  if (hash.length !== storedBuf.length) return false;
+  return timingSafeEqual(hash, storedBuf);
+}
+
 function bytesToBase64url(buf: ArrayBuffer): string {
   const bytes = new Uint8Array(buf);
   let binary = '';
@@ -15,14 +35,14 @@ function base64urlToBuffer(str: string): ArrayBuffer {
   return buf;
 }
 
-export async function createAdminToken(secret: string): Promise<string> {
+export async function createAdminToken(secret: string, extra: Record<string, unknown> = {}): Promise<string> {
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
     'raw', encoder.encode(secret),
     { name: 'HMAC', hash: 'SHA-256' },
     false, ['sign']
   );
-  const payload = btoa(JSON.stringify({ ts: Date.now() }))
+  const payload = btoa(JSON.stringify({ ts: Date.now(), ...extra }))
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
   const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(payload));
   return `${payload}.${bytesToBase64url(sig)}`;

@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Lock, Eye, EyeOff } from 'lucide-react';
 
 export default function AdminLogin() {
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -18,13 +19,13 @@ export default function AdminLogin() {
       const res = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ username, password }),
       });
       const data = await res.json();
       if (data.success) {
         window.location.href = '/admin';
       } else {
-        setError(data.error || 'Неверный пароль');
+        setError(data.error || 'Неверный логин или пароль');
         setLoading(false);
       }
     } catch {
@@ -53,12 +54,28 @@ export default function AdminLogin() {
         <form onSubmit={handleSubmit} className="bg-white rounded-[2rem] border border-zinc-100 p-10 shadow-sm space-y-6">
           <div>
             <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block mb-3">
+              Логин
+            </label>
+            <input
+              type="text"
+              required
+              autoComplete="username"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              placeholder="Введите логин"
+              className="w-full bg-[#FAFAFA] px-6 py-5 rounded-2xl border border-zinc-100 focus:border-primary focus:ring-4 focus:ring-primary/5 font-bold text-sm outline-none transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block mb-3">
               Пароль
             </label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
+                autoComplete="current-password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 placeholder="Введите пароль"
