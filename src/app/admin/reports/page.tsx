@@ -31,6 +31,7 @@ interface ServiceHistoryRow {
   startTime: string;
   status: string;
   totalPrice: number;
+  clientId: string | null;
   client: { name: string | null; phone: string | null; telegram_username: string | null } | null;
 }
 
@@ -103,6 +104,13 @@ export default function ReportsPage() {
     fetch('/api/admin/services').then(r => r.ok ? r.json() : []).then(setServices);
   }, []);
 
+  const serviceSummary = useMemo(() => {
+    const completed = serviceRows.filter(r => r.status === 'completed');
+    const revenue = completed.reduce((sum, r) => sum + (r.totalPrice || 0), 0);
+    const uniqueClients = new Set(completed.map(r => r.clientId).filter(Boolean)).size;
+    return { revenue, visits: completed.length, uniqueClients, avgCheck: completed.length > 0 ? revenue / completed.length : 0 };
+  }, [serviceRows]);
+
   const rangeLabel = `${format(new Date(from), 'd MMM yyyy', { locale: ru })} — ${format(new Date(to), 'd MMM yyyy', { locale: ru })}`;
 
   return (
@@ -149,19 +157,19 @@ export default function ReportsPage() {
       </div>
 
       {/* Вкладки */}
-      <div className="flex gap-2">
+      <div className="inline-flex gap-1 bg-white border border-zinc-100 rounded-2xl p-1.5 shadow-sm">
         <button
           onClick={() => setTab('overview')}
-          className={`px-6 py-3 rounded-full text-[11px] font-black uppercase tracking-widest transition-all ${
-            tab === 'overview' ? 'bg-primary text-white' : 'bg-zinc-50 text-zinc-400 hover:text-zinc-600'
+          className={`px-6 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${
+            tab === 'overview' ? 'bg-[#0A0A0A] text-white shadow-md' : 'text-zinc-400 hover:text-zinc-700'
           }`}
         >
           Общая статистика
         </button>
         <button
           onClick={() => setTab('service')}
-          className={`px-6 py-3 rounded-full text-[11px] font-black uppercase tracking-widest transition-all ${
-            tab === 'service' ? 'bg-primary text-white' : 'bg-zinc-50 text-zinc-400 hover:text-zinc-600'
+          className={`px-6 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${
+            tab === 'service' ? 'bg-[#0A0A0A] text-white shadow-md' : 'text-zinc-400 hover:text-zinc-700'
           }`}
         >
           По услуге
@@ -244,6 +252,31 @@ export default function ReportsPage() {
               </select>
             </div>
           </div>
+
+          {selectedServiceId && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+              <div className="bg-white p-8 rounded-[2rem] border border-zinc-100 shadow-sm">
+                <div className="p-3 rounded-2xl bg-pink-50 text-primary w-fit mb-6"><Wallet size={22} /></div>
+                <div className="text-3xl font-black tracking-tighter mb-1">{fmt(serviceSummary.revenue)} ₽</div>
+                <div className="text-zinc-400 text-[9px] font-black uppercase tracking-widest">Выручка</div>
+              </div>
+              <div className="bg-white p-8 rounded-[2rem] border border-zinc-100 shadow-sm">
+                <div className="p-3 rounded-2xl bg-blue-50 text-blue-500 w-fit mb-6"><Receipt size={22} /></div>
+                <div className="text-3xl font-black tracking-tighter mb-1">{serviceSummary.visits}</div>
+                <div className="text-zinc-400 text-[9px] font-black uppercase tracking-widest">Завершённых визитов</div>
+              </div>
+              <div className="bg-white p-8 rounded-[2rem] border border-zinc-100 shadow-sm">
+                <div className="p-3 rounded-2xl bg-green-50 text-green-500 w-fit mb-6"><Users size={22} /></div>
+                <div className="text-3xl font-black tracking-tighter mb-1">{serviceSummary.uniqueClients}</div>
+                <div className="text-zinc-400 text-[9px] font-black uppercase tracking-widest">Уникальных клиентов</div>
+              </div>
+              <div className="bg-white p-8 rounded-[2rem] border border-zinc-100 shadow-sm">
+                <div className="p-3 rounded-2xl bg-amber-50 text-amber-500 w-fit mb-6"><TrendingUp size={22} /></div>
+                <div className="text-3xl font-black tracking-tighter mb-1">{fmt(serviceSummary.avgCheck)} ₽</div>
+                <div className="text-zinc-400 text-[9px] font-black uppercase tracking-widest">Средний чек</div>
+              </div>
+            </div>
+          )}
 
           <div className="bg-white rounded-[2.5rem] border border-zinc-100 overflow-hidden shadow-sm">
             {!selectedServiceId ? (

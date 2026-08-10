@@ -24,7 +24,7 @@ export async function GET(req: Request) {
     const { data, error } = await supabaseAdmin
       .from('appointments')
       .select(`
-        id, date, start_time, status, total_price,
+        id, date, start_time, status, total_price, client_id,
         profiles ( name, phone, telegram_username ),
         appointment_services!inner ( service_id )
       `)
@@ -42,6 +42,7 @@ export async function GET(req: Request) {
       startTime: a.start_time,
       status: a.status,
       totalPrice: a.total_price,
+      clientId: a.client_id,
       client: a.profiles as unknown as { name: string; phone: string; telegram_username: string | null } | null,
     }));
 
