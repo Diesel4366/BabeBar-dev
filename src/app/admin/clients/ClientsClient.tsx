@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import Link from 'next/link';
 import { Users, Phone, Calendar, Send, Cake, ChevronDown, Check, X, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -56,14 +57,14 @@ function ClientCard({ client: initial }: { client: Client }) {
       {/* Main row */}
       <div className="p-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
         <div className="flex gap-8 items-center">
-          <div className="w-20 h-20 bg-zinc-50 rounded-3xl flex items-center justify-center text-zinc-400 group-hover:bg-primary/5 group-hover:text-primary transition-colors flex-shrink-0">
+          <Link href={`/admin/clients/${client.id}`} className="w-20 h-20 bg-zinc-50 rounded-3xl flex items-center justify-center text-zinc-400 group-hover:bg-primary/5 group-hover:text-primary transition-colors flex-shrink-0">
             <Users size={32} />
-          </div>
+          </Link>
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <h3 className="text-2xl font-black uppercase tracking-tight text-[#0A0A0A]">
+              <Link href={`/admin/clients/${client.id}`} className="text-2xl font-black uppercase tracking-tight text-[#0A0A0A] hover:text-primary transition-colors">
                 {client.name || 'Без имени'}
-              </h3>
+              </Link>
               {client.nickname && (
                 <span className="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest text-white" style={{ backgroundColor: '#D14D72' }}>
                   {client.nickname}
