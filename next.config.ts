@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'images.unsplash.com' },
       { protocol: 'https', hostname: 'lrnajodxfwegimnwnbdd.supabase.co' },
       { protocol: 'https', hostname: 'foomerisayo.beget.app' },
+      { protocol: 'https', hostname: 'api.babebar.ru' },
     ],
   },
 };

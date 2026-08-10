@@ -144,8 +144,8 @@ export default function InventoryPage() {
   };
 
   // ─── Строки поступления ───────────────────────────────────────────────────
-  const addSimpleLine = () => setPurchaseLines(l => [...l, { type: 'simple', item_id: '', packages_count: 1, units_per_package: 1, package_price: 0 }]);
-  const addBundleLine = () => setPurchaseLines(l => [...l, { type: 'bundle', name: '', packages_count: 1, total_price: 0, lines: [{ item_id: '', qty_per_package: 1 }] }]);
+  const addSimpleLine = () => setPurchaseLines(l => [...l, { type: 'simple', item_id: '', packages_count: '', units_per_package: '', package_price: '' } as unknown as SimpleLine]);
+  const addBundleLine = () => setPurchaseLines(l => [...l, { type: 'bundle', name: '', packages_count: '', total_price: '', lines: [{ item_id: '', qty_per_package: '' }] } as unknown as BundleLine]);
   const removePurchaseLine = (i: number) => setPurchaseLines(l => l.filter((_, idx) => idx !== i));
 
   const updateSimple = (i: number, field: keyof SimpleLine, value: string | number) => {
@@ -159,7 +159,7 @@ export default function InventoryPage() {
   const addBundleRow = (i: number) => {
     setPurchaseLines(l => l.map((line, idx) => {
       if (idx !== i || line.type !== 'bundle') return line;
-      return { ...line, lines: [...line.lines, { item_id: '', qty_per_package: 1 }] };
+      return { ...line, lines: [...line.lines, { item_id: '', qty_per_package: '' as unknown as number }] };
     }));
   };
 
@@ -188,10 +188,13 @@ export default function InventoryPage() {
   };
 
   const handleReceiptSave = async () => {
-    const valid = purchaseLines.filter(l => {
-      if (l.type === 'simple') return l.item_id && l.units_per_package > 0;
-      return l.lines.some(r => r.item_id);
-    });
+    const normalized = purchaseLines.map(l => l.type === 'simple'
+      ? { ...l, package_price: l.package_price || 0 }
+      : { ...l, total_price: l.total_price || 0 });
+    const valid = normalized.filter(l => {
+      if (l.type === 'simple') return l.item_id && l.packages_count > 0 && l.units_per_package > 0;
+      return l.packages_count > 0 && l.lines.some(r => r.item_id && r.qty_per_package > 0);
+    }).map(l => l.type === 'bundle' ? { ...l, lines: l.lines.filter(r => r.item_id && r.qty_per_package > 0) } : l);
     if (valid.length === 0) return;
     setReceiptSaving(true);
     try {
@@ -552,21 +555,21 @@ export default function InventoryPage() {
                               <div className="grid grid-cols-3 gap-2">
                                 <div>
                                   <label className="block text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-1.5">Упак. куплено</label>
-                                  <input type="number" min="1" step="1" value={line.packages_count}
-                                    onChange={e => updateSimple(i, 'packages_count', parseFloat(e.target.value) || 1)}
-                                    className="w-full bg-zinc-50 border-none rounded-xl py-3 px-3 text-sm font-bold text-center focus:ring-2 focus:ring-[#D14D72]/20" />
+                                  <input type="number" min="1" step="1" value={line.packages_count} placeholder="—"
+                                    onChange={e => updateSimple(i, 'packages_count', e.target.value === '' ? '' : (parseFloat(e.target.value) || 1))}
+                                    className="w-full bg-zinc-50 border-none rounded-xl py-3 px-3 text-sm font-bold text-center focus:ring-2 focus:ring-[#D14D72]/20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                                 </div>
                                 <div>
                                   <label className="block text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-1.5">Ед. в упак.</label>
-                                  <input type="number" min="0.01" step="0.01" value={line.units_per_package}
-                                    onChange={e => updateSimple(i, 'units_per_package', parseFloat(e.target.value) || 1)}
-                                    className="w-full bg-zinc-50 border-none rounded-xl py-3 px-3 text-sm font-bold text-center focus:ring-2 focus:ring-[#D14D72]/20" />
+                                  <input type="number" min="0.01" step="0.01" value={line.units_per_package} placeholder="—"
+                                    onChange={e => updateSimple(i, 'units_per_package', e.target.value === '' ? '' : (parseFloat(e.target.value) || 1))}
+                                    className="w-full bg-zinc-50 border-none rounded-xl py-3 px-3 text-sm font-bold text-center focus:ring-2 focus:ring-[#D14D72]/20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                                 </div>
                                 <div>
                                   <label className="block text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-1.5">Цена упак. ₽</label>
-                                  <input type="number" min="0" step="0.01" value={line.package_price}
-                                    onChange={e => updateSimple(i, 'package_price', parseFloat(e.target.value) || 0)}
-                                    className="w-full bg-zinc-50 border-none rounded-xl py-3 px-3 text-sm font-bold text-center focus:ring-2 focus:ring-[#D14D72]/20" />
+                                  <input type="number" min="0" step="0.01" value={line.package_price} placeholder="—"
+                                    onChange={e => updateSimple(i, 'package_price', e.target.value === '' ? '' : (parseFloat(e.target.value) || 0))}
+                                    className="w-full bg-zinc-50 border-none rounded-xl py-3 px-3 text-sm font-bold text-center focus:ring-2 focus:ring-[#D14D72]/20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                                 </div>
                               </div>
                             </div>
@@ -588,15 +591,15 @@ export default function InventoryPage() {
                               </div>
                               <div>
                                 <label className="block text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-1.5">Куплено шт.</label>
-                                <input type="number" min="1" step="1" value={line.packages_count}
-                                  onChange={e => updateBundle(i, 'packages_count', parseFloat(e.target.value) || 1)}
-                                  className="w-full bg-zinc-50 border-none rounded-xl py-3 px-3 text-sm font-bold text-center focus:ring-2 focus:ring-[#D14D72]/20" />
+                                <input type="number" min="1" step="1" value={line.packages_count} placeholder="—"
+                                  onChange={e => updateBundle(i, 'packages_count', e.target.value === '' ? '' : (parseFloat(e.target.value) || 1))}
+                                  className="w-full bg-zinc-50 border-none rounded-xl py-3 px-3 text-sm font-bold text-center focus:ring-2 focus:ring-[#D14D72]/20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                               </div>
                               <div>
                                 <label className="block text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-1.5">Цена 1 компл. ₽</label>
-                                <input type="number" min="0" step="0.01" value={line.total_price}
-                                  onChange={e => updateBundle(i, 'total_price', parseFloat(e.target.value) || 0)}
-                                  className="w-full bg-zinc-50 border-none rounded-xl py-3 px-3 text-sm font-bold text-center focus:ring-2 focus:ring-[#D14D72]/20" />
+                                <input type="number" min="0" step="0.01" value={line.total_price} placeholder="—"
+                                  onChange={e => updateBundle(i, 'total_price', e.target.value === '' ? '' : (parseFloat(e.target.value) || 0))}
+                                  className="w-full bg-zinc-50 border-none rounded-xl py-3 px-3 text-sm font-bold text-center focus:ring-2 focus:ring-[#D14D72]/20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                               </div>
                             </div>
 
@@ -612,9 +615,9 @@ export default function InventoryPage() {
                                     <option value="">— выберите —</option>
                                     {items.map(it => <option key={it.id} value={it.id}>{it.name}</option>)}
                                   </select>
-                                  <input type="number" min="0.01" step="0.01" value={row.qty_per_package}
-                                    onChange={e => updateBundleRow(i, ri, 'qty_per_package', parseFloat(e.target.value) || 1)}
-                                    className="w-full bg-zinc-50 border-none rounded-xl py-3 px-3 text-sm font-bold text-center focus:ring-2 focus:ring-[#D14D72]/20" />
+                                  <input type="number" min="0.01" step="0.01" value={row.qty_per_package} placeholder="—"
+                                    onChange={e => updateBundleRow(i, ri, 'qty_per_package', e.target.value === '' ? '' : (parseFloat(e.target.value) || 1))}
+                                    className="w-full bg-zinc-50 border-none rounded-xl py-3 px-3 text-sm font-bold text-center focus:ring-2 focus:ring-[#D14D72]/20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                                   <button onClick={() => removeBundleRow(i, ri)} disabled={line.lines.length === 1}
                                     className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-300 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-20">
                                     <X size={14} />

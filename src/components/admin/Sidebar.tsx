@@ -16,7 +16,8 @@ import {
   X,
   Send,
   Package,
-  Tag
+  Tag,
+  BarChart3
 } from 'lucide-react';
 import LogoutButton from './LogoutButton';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -28,6 +29,7 @@ const MENU_ITEMS = [
   { name: 'Услуги', icon: Scissors, href: '/admin/services' },
   { name: 'Клиенты', icon: Users, href: '/admin/clients' },
   { name: 'Склад', icon: Package, href: '/admin/inventory' },
+  { name: 'Отчёты', icon: BarChart3, href: '/admin/reports' },
   { name: 'Рассылка', icon: Send, href: '/admin/broadcast' },
   { name: 'Промокоды', icon: Tag, href: '/admin/promo' },
   { name: 'Настройки', icon: Settings, href: '/admin/settings' },

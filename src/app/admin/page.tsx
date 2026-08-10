@@ -141,7 +141,7 @@ export default async function AdminDashboard() {
           <div className="text-zinc-400 text-[9px] font-black uppercase tracking-widest">Новых за месяц</div>
         </Link>
 
-        <Link href="/admin/reports/revenue" className="bg-white p-8 md:p-10 rounded-[2rem] md:rounded-[2.5rem] border border-zinc-100 shadow-sm group hover:border-primary transition-all duration-500">
+        <Link href="/admin/reports" className="bg-white p-8 md:p-10 rounded-[2rem] md:rounded-[2.5rem] border border-zinc-100 shadow-sm group hover:border-primary transition-all duration-500">
           <div className="flex justify-between items-start mb-6">
             <div className="p-3 md:p-4 rounded-2xl bg-pink-50 text-primary group-hover:bg-primary group-hover:text-white transition-all duration-500">
               <TrendingUp size={24} />
