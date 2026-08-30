@@ -6,7 +6,7 @@ export const revalidate = 3600; // Обновлять кэш раз в час
 export async function generateMetadata(): Promise<Metadata> {
   return {
     title: 'BABEBAR — Студия красоты в Нижнем Новгороде',
-    description: 'Запишитесь онлайн на наращивание ресниц, оформление бровей или макияж. Нижний Новгород, ул. Сазанова 2А. Работаем ежедневно.',
+    description: 'Запишитесь онлайн на наращивание ресниц, оформление бровей или макияж. Нижний Новгород, ул. Головнина, д.35. Работаем ежедневно.',
     alternates: { canonical: 'https://babebar.ru' },
   };
 }
@@ -147,7 +147,7 @@ export default async function Home() {
           telephone: settings.phone,
           address: {
             '@type': 'PostalAddress',
-            streetAddress: 'ул. Сазанова 2А',
+            streetAddress: 'ул. Головнина, д.35',
             addressLocality: 'Нижний Новгород',
             addressCountry: 'RU',
           },

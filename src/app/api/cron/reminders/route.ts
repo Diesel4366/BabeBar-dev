@@ -147,7 +147,7 @@ export async function GET(req: Request) {
       const text =
         `⏰ <b>${name ? name + ', совсем скоро!' : 'Совсем скоро!'}</b>\n\n` +
         `Через час в <b>${time}</b> ждём вас на:\n💅 ${serviceNames(app)}\n\n` +
-        `<b>BABEBAR</b>, ул. Сазанова 2А 📍`;
+        `<b>BABEBAR</b>, ул. Головнина, д.35 📍`;
 
       const res = await sendMsg(chatId, text);
       if (res?.ok) {

@@ -220,7 +220,7 @@ function SuccessContent() {
                     const startTime = appt.startTime.replace(':', '');
                     const title = encodeURIComponent(`BABEBAR: ${appt.services.join(', ')}`);
                     const details = encodeURIComponent('Ждем вас в нашей студии! Если планы изменятся, пожалуйста, предупредите нас заранее.');
-                    const location = encodeURIComponent('Нижний Новгород, ул. Сазанова 2А');
+                    const location = encodeURIComponent('Нижний Новгород, ул. Головнина, д.35');
                     const dates = `${dateStr}T${startTime}00/${dateStr}T${startTime}00`;
                     window.open(`https://www.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&location=${location}&dates=${dates}`, '_blank');
                   }}

@@ -132,7 +132,7 @@ export default function BookingSuccessModal({ isOpen, onClose, data }: BookingSu
                       // Создаем Google Calendar Link
                       const title = encodeURIComponent(`BABEBAR: ${data.services.map(s => s.name).join(', ')}`);
                       const details = encodeURIComponent('Ждем вас в нашей студии! Если планы изменятся, пожалуйста, предупредите нас заранее.');
-                      const location = encodeURIComponent('Нижний Новгород, ул. Сазанова 2А');
+                      const location = encodeURIComponent('Нижний Новгород, ул. Головнина, д.35');
                       const dates = `${dateStr}T${startTime}00/${dateStr}T${startTime}00`; // Упрощенно начало=конец для календаря
                       
                       const url = `https://www.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&location=${location}&dates=${dates}`;
