@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { supabaseAdmin } from '@/lib/supabase';
 import { verifyAdminToken } from '@/lib/auth';
 async function checkAuth(req: Request): Promise<boolean> {
@@ -6,6 +7,12 @@ async function checkAuth(req: Request): Promise<boolean> {
   const cookie = req.headers.get('cookie') || '';
   const session = cookie.split(';').find(c => c.trim().startsWith('admin_session='))?.split('=')[1];
   return !(!session || !secret || !(await verifyAdminToken(session, secret)));
+}
+
+// Сбросить ISR-кеш публичных страниц, где показываются услуги (главная + SEO-страницы услуг)
+function revalidatePublicServices() {
+  revalidatePath('/');
+  revalidatePath('/services/[slug]', 'page');
 }
 
 export async function GET(req: Request) {
@@ -28,6 +35,7 @@ export async function POST(req: Request) {
     .select()
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  revalidatePublicServices();
   return NextResponse.json(data, { status: 201 });
 }
 
@@ -42,6 +50,7 @@ export async function PUT(req: Request) {
     .select()
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  revalidatePublicServices();
   return NextResponse.json(data);
 }
 
@@ -51,5 +60,6 @@ export async function DELETE(req: Request) {
   if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400 });
   const { error } = await supabaseAdmin.from('services').delete().eq('id', id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  revalidatePublicServices();
   return NextResponse.json({ success: true });
 }
