@@ -164,7 +164,7 @@ export default async function Home() {
               BABE<span className="text-primary italic">BAR</span>
             </div>
             <iframe
-              src="https://yandex.ru/sprav/widget/rating-badge/154956853752?type=rating"
+              src="https://yandex.ru/sprav/widget/rating-badge/154462815596?type=rating"
               width="150"
               height="50"
               frameBorder={0}

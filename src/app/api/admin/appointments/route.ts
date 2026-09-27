@@ -371,7 +371,7 @@ export async function PATCH(req: Request) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               chat_id: clientChatId,
-              text: `✅ <b>Визит завершён!</b>\n\nСпасибо, что выбрали нас 🌸\n💅 <b>Услуги:</b> ${esc(serviceNames)}\n\nБудем рады видеть вас снова! Если вам всё понравилось — пожалуйста, оставьте отзыв, это очень важно для нас 🙏\n\n⭐ <a href="https://ya.cc/t/UtKOGC5i9QoAAb">Оставить отзыв</a>`,
+              text: `✅ <b>Визит завершён!</b>\n\nСпасибо, что выбрали нас 🌸\n💅 <b>Услуги:</b> ${esc(serviceNames)}\n\nБудем рады видеть вас снова! Если вам всё понравилось — пожалуйста, оставьте отзыв, это очень важно для нас 🙏\n\n⭐ <a href="https://yandex.ru/maps/org/beybi_bar/154462815596/reviews/">Оставить отзыв</a>`,
               parse_mode: 'HTML',
             }),
           });
